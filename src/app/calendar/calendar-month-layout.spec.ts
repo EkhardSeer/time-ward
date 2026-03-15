@@ -72,14 +72,15 @@ describe('CalendarMonthLayout', () => {
 
     it('should create overflow badges when exceeding MAX_VISIBLE per day', () => {
       const weeks = layout.generateMonth(june2025);
-      // Create 5 non-overlapping events on the same day
+      // Create 5 time-overlapping events on the same day (all 08:00–09:00)
+      // Each one conflicts with the others and forces a new row.
       const events: CalendarEvent[] = [];
       for (let i = 0; i < 5; i++) {
         events.push(
           makeEvent({
             id: `e${i}`,
-            start: june2025.set({ hour: 8 + i }),
-            end: june2025.set({ hour: 9 + i }),
+            start: june2025.set({ hour: 8 }),
+            end: june2025.set({ hour: 9 }),
           }),
         );
       }

@@ -2,10 +2,7 @@ import { DateTime } from 'luxon';
 import { CalendarEvent, PositionedEvent } from './calendar-event';
 import { CalendarLayoutBase } from './calendar-layout-base';
 
-/**
- * Tracks occupied rows for collision detection.
- * Stores time intervals to detect actual overlap, not just day occupancy.
- */
+/** Tracks occupied time intervals per row for collision detection. */
 interface RowState {
   intervals: Array<{ start: DateTime; end: DateTime }>;
 }
@@ -13,8 +10,10 @@ interface RowState {
 interface MonthLayoutContext {
   weeks: DateTime[][];
   weekHeightPercent: number;
-  rowHeightPercent: number;
+  dayHeaderHeightPercent: number;
+  eventRowHeightPercent: number;
   dayWidth: number;
+  /** rowsPerDay[weekIdx][dayIdx][row] — time intervals already placed in that row. */
   rowsPerDay: RowState[][][];
   hiddenEventsMap: Map<string, { count: number; weekIndex: number; dayKey: number }>;
   positioned: PositionedEvent[];
@@ -50,6 +49,18 @@ interface WeekSegment {
 export class CalendarMonthLayout extends CalendarLayoutBase {
   /** Maximum visible events per day cell before showing an overflow badge. */
   private readonly MAX_VISIBLE_EVENTS_PER_ROW = 3;
+  /** Fraction of each week row reserved for the day-number chip (keeps events below the number). */
+  private readonly MONTH_DAY_HEADER_FRACTION = 0.2;
+  /**
+   * Minimum rendered width for a single-day event, as a fraction of one day column.
+   * 1 = always fill the full day column (ensures short events are always readable).
+   */
+  private readonly MIN_SINGLE_DAY_WIDTH_FRACTION = 1;
+  /**
+   * Event height as a fraction of its row slot — the remainder becomes the inter-event gap.
+   * 0.85 leaves a small 15% gap between stacked events.
+   */
+  private readonly EVENT_HEIGHT_FRACTION = 0.85;
 
   // ========== Generator Functions ==========
 
@@ -89,12 +100,21 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
 
   private initContext(weeks: DateTime[][]): MonthLayoutContext {
     const weekHeightPercent = 100 / weeks.length;
+    const dayHeaderHeightPercent = weekHeightPercent * this.MONTH_DAY_HEADER_FRACTION;
+    const eventRowHeightPercent = (weekHeightPercent * (1 - this.MONTH_DAY_HEADER_FRACTION)) / 4;
     return {
       weeks,
       weekHeightPercent,
-      rowHeightPercent: weekHeightPercent / 4,
+      dayHeaderHeightPercent,
+      eventRowHeightPercent,
       dayWidth: 100 / 7,
-      rowsPerDay: weeks.map(() => Array.from({ length: 7 }, () => Array(10).fill(null))),
+      rowsPerDay: weeks.map(() =>
+        Array.from({ length: 7 }, () =>
+          Array.from({ length: 10 }, () => ({
+            intervals: [] as Array<{ start: DateTime; end: DateTime }>,
+          })),
+        ),
+      ),
       hiddenEventsMap: new Map(),
       positioned: [],
     };
@@ -220,20 +240,22 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     return rowPerWeek;
   }
 
+  /**
+   * A row is available if the event does not time-overlap any existing interval in that row.
+   * Strict inequality: an event starting exactly when another ends is NOT considered overlapping.
+   */
   private isRowAvailable(
     event: CalendarEvent,
     seg: WeekSegment,
     row: number,
     ctx: MonthLayoutContext,
   ): boolean {
+    const eff = this.effectiveInterval(event);
     for (let dayIdx = seg.firstDayIndex; dayIdx <= seg.lastDayIndex; dayIdx++) {
-      const dayRows = ctx.rowsPerDay[seg.weekIndex][dayIdx];
-      if (!dayRows[row]) dayRows[row] = { intervals: [] };
-
-      for (const interval of dayRows[row].intervals) {
+      for (const interval of ctx.rowsPerDay[seg.weekIndex][dayIdx][row].intervals) {
         if (
-          event.start.toMillis() < interval.end.toMillis() &&
-          event.end.toMillis() > interval.start.toMillis()
+          eff.start.toMillis() < interval.end.toMillis() &&
+          eff.end.toMillis() > interval.start.toMillis()
         ) {
           return false;
         }
@@ -248,14 +270,29 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     rowPerWeek: Map<number, number>,
     ctx: MonthLayoutContext,
   ): void {
+    const eff = this.effectiveInterval(event);
     for (const seg of segments) {
       const row = rowPerWeek.get(seg.weekIndex)!;
       for (let dayIdx = seg.firstDayIndex; dayIdx <= seg.lastDayIndex; dayIdx++) {
-        const dayRows = ctx.rowsPerDay[seg.weekIndex][dayIdx];
-        if (!dayRows[row]) dayRows[row] = { intervals: [] };
-        dayRows[row].intervals.push({ start: event.start, end: event.end });
+        ctx.rowsPerDay[seg.weekIndex][dayIdx][row].intervals.push(eff);
       }
     }
+  }
+
+  /**
+   * Returns the time interval to use for collision detection.
+   * Events shorter than MIN_SINGLE_DAY_WIDTH_FRACTION of a day are expanded to fill
+   * the full day column when rendered, so they are treated as occupying the full day
+   * here too — preventing adjacent (non-overlapping) short events from sharing a row
+   * and rendering on top of each other.
+   */
+  private effectiveInterval(event: CalendarEvent): { start: DateTime; end: DateTime } {
+    const durationHours = event.end.diff(event.start, 'hours').hours;
+    if (durationHours < 24 * this.MIN_SINGLE_DAY_WIDTH_FRACTION) {
+      const dayStart = event.start.startOf('day');
+      return { start: dayStart, end: dayStart.plus({ days: 1 }) };
+    }
+    return { start: event.start, end: event.end };
   }
 
   private renderSegment(
@@ -267,7 +304,9 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
   ): void {
     const weekAssignedRow = rowPerWeek.get(seg.weekIndex) ?? 0;
     const topPercent =
-      seg.weekIndex * ctx.weekHeightPercent + weekAssignedRow * ctx.rowHeightPercent;
+      seg.weekIndex * ctx.weekHeightPercent +
+      ctx.dayHeaderHeightPercent +
+      weekAssignedRow * ctx.eventRowHeightPercent;
     const { leftPercent, widthPercent } = this.calculateSegmentBounds(
       event,
       seg,
@@ -302,7 +341,10 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     ctx.positioned.push({
       ...event,
       layout,
-      sizing: this.buildSizing({ topPercent, heightPercentMonth: ctx.rowHeightPercent * 0.7 }),
+      sizing: this.buildSizing({
+        topPercent,
+        heightPercentMonth: ctx.eventRowHeightPercent * this.EVENT_HEIGHT_FRACTION,
+      }),
       metadata: this.buildViewMetadata(seg.firstDayIndex, 0, event.start, event.end),
     });
   }
@@ -342,9 +384,18 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     startDayIndex: number,
     dayWidth: number,
   ): { leftPercent: number; widthPercent: number } {
-    const leftPercent = startDayIndex * dayWidth + this.hourFraction(event.start) * dayWidth;
+    const rawLeft = startDayIndex * dayWidth + this.hourFraction(event.start) * dayWidth;
     const durationHours = event.end.diff(event.start, 'minutes').minutes / 60;
-    return { leftPercent, widthPercent: (durationHours / 24) * dayWidth };
+    const rawWidth = (durationHours / 24) * dayWidth;
+    const minWidth = dayWidth * this.MIN_SINGLE_DAY_WIDTH_FRACTION;
+
+    if (rawWidth >= minWidth) {
+      return { leftPercent: rawLeft, widthPercent: rawWidth };
+    }
+
+    // Enforce minimum width; clamp left so the event doesn't overflow past the day's right edge.
+    const dayRightEdge = (startDayIndex + 1) * dayWidth;
+    return { leftPercent: Math.min(rawLeft, dayRightEdge - minWidth), widthPercent: minWidth };
   }
 
   private firstWeekBounds(
@@ -386,7 +437,9 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
   private emitOverflowBadges(ctx: MonthLayoutContext): void {
     for (const { count, weekIndex, dayKey } of ctx.hiddenEventsMap.values()) {
       const topPercent =
-        weekIndex * ctx.weekHeightPercent + this.MAX_VISIBLE_EVENTS_PER_ROW * ctx.rowHeightPercent;
+        weekIndex * ctx.weekHeightPercent +
+        ctx.dayHeaderHeightPercent +
+        this.MAX_VISIBLE_EVENTS_PER_ROW * ctx.eventRowHeightPercent;
 
       ctx.positioned.push({
         id: `overflow-${weekIndex}-${dayKey}`,
@@ -404,7 +457,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
         ),
         sizing: this.buildSizing({
           topPercent,
-          heightPercentMonth: ctx.rowHeightPercent * 0.7,
+          heightPercentMonth: ctx.eventRowHeightPercent * this.EVENT_HEIGHT_FRACTION,
         }),
         metadata: this.buildViewMetadata(dayKey, count),
       });
