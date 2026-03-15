@@ -1,11 +1,6 @@
 import { DateTime } from 'luxon';
-import {
-  CalendarEvent,
-  PositionedEvent,
-  PositionLayout,
-  SizingConfig,
-  ViewMetadata,
-} from './calendar-event';
+import { CalendarEvent, PositionedEvent } from './calendar-event';
+import { CalendarLayoutBase } from './calendar-layout-base';
 
 /**
  * Tracks occupied rows for collision detection.
@@ -15,36 +10,21 @@ interface RowState {
   intervals: Array<{ start: DateTime; end: DateTime }>;
 }
 
-export class CalendarMonthLayout {
-  // Configuration
-  private readonly MAX_VISIBLE_EVENTS_PER_ROW = 3; // Show 3 events; badge occupies the 4th slot
-
-  // ========== Builder Functions ==========
-
-  private buildPositionLayout(
-    left: number,
-    width: number,
-    row: number,
-    weekIndex: number,
-    colStart: number,
-    colSpan: number,
-  ): PositionLayout {
-    return { left, width, row, weekIndex, colStart, colSpan };
-  }
-
-  private buildMonthSizing(topPercent: number, heightPercentMonth: number): SizingConfig {
-    return { topPercent, heightPercentMonth };
-  }
-
-  private buildViewMetadata(
-    dayIndex?: number,
-    hiddenCount?: number,
-    eventStart?: DateTime,
-    eventEnd?: DateTime,
-    rowSpan?: number,
-  ): ViewMetadata {
-    return { dayIndex, hiddenCount, eventStart, eventEnd, rowSpan };
-  }
+/**
+ * Layout engine for the month calendar view.
+ *
+ * Positions events on a grid of week-rows × 7-day columns.
+ * Multi-day and multi-week events are split into one positioned segment
+ * per week they span. Collision detection uses time-interval overlap
+ * (not just day occupancy) so events on the same day but at different
+ * times can share a visual row.
+ *
+ * Up to `MAX_VISIBLE_EVENTS_PER_ROW` events are rendered per day;
+ * additional events are collapsed into an overflow "+N more" badge.
+ */
+export class CalendarMonthLayout extends CalendarLayoutBase {
+  /** Maximum visible events per day cell before showing an overflow badge. */
+  private readonly MAX_VISIBLE_EVENTS_PER_ROW = 3;
 
   // ========== Generator Functions ==========
 
@@ -351,7 +331,7 @@ export class CalendarMonthLayout {
         // Calculate event height: consistent height for all events in slot
         const weekEventHeightPercent = rowHeightPercent * 0.7;
 
-        const sizing = this.buildMonthSizing(topPercent, weekEventHeightPercent);
+        const sizing = this.buildSizing({ topPercent, heightPercentMonth: weekEventHeightPercent });
 
         const metadata = this.buildViewMetadata(weekSpan.firstDayIndex, 0, event.start, event.end);
 
@@ -376,7 +356,10 @@ export class CalendarMonthLayout {
         dayKey + 1,
         1,
       );
-      const overflowSizing = this.buildMonthSizing(topPercent, rowHeightPercent * 0.7);
+      const overflowSizing = this.buildSizing({
+        topPercent,
+        heightPercentMonth: rowHeightPercent * 0.7,
+      });
       const overflowMetadata = this.buildViewMetadata(dayKey, count);
 
       positioned.push({

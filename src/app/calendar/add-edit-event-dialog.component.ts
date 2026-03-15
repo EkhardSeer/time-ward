@@ -76,12 +76,12 @@ export interface EventData {
     EventTimeRangeComponent,
   ],
   styles: `
-    mat-dialog-content {
+    :host mat-dialog-content {
       display: flex;
       flex-direction: column;
       gap: 4px;
       min-width: 440px;
-      padding-top: 8px !important;
+      padding-top: 8px;
     }
     .title-field {
       width: 100%;

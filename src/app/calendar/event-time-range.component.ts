@@ -190,10 +190,11 @@ export const DEFAULT_DURATIONS: DurationOption[] = [
       background: rgba(0, 0, 0, 0.06);
       border-color: rgba(0, 0, 0, 0.35);
     }
-    .dur-chip-active {
-      background: var(--mdc-filled-button-container-color, #1976d2) !important;
-      border-color: transparent !important;
-      color: white !important;
+    .dur-chip-active,
+    .dur-chip-active:hover {
+      background: var(--mdc-filled-button-container-color, #1976d2);
+      border-color: transparent;
+      color: white;
     }
   `,
 })

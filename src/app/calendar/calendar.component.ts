@@ -109,20 +109,10 @@ export class CalendarComponent implements OnInit {
     this.view.set('month');
     this.date.set(this.date().startOf('month'));
   }
-  onWeekNumberClick(event: MouseEvent, weekFirstDay: any) {
-    event.stopPropagation();
-    this.weekLayout(weekFirstDay);
-  }
-  weekLayout(weekDateOrIndex: any) {
+  weekLayout(weekDate: DateTime) {
     this.view.set('week');
-    // If it's a DateTime object, use it directly. Otherwise, calculate from current weeks
-    const weekDate = weekDateOrIndex?.toJSDate
-      ? weekDateOrIndex
-      : this.weeks()[weekDateOrIndex]?.[0];
-    if (weekDate) {
-      this.date.set(weekDate);
-      this.scrollToBusinessHours();
-    }
+    this.date.set(weekDate);
+    this.scrollToBusinessHours();
   }
 
   dayLayout(date: DateTime) {
@@ -433,15 +423,18 @@ export class CalendarComponent implements OnInit {
 
   openEditEventDialog(event: PositionedEvent) {
     if (this.readonly()) return;
-    const realEvent = {
-      ...event,
-      start: event.metadata.eventStart || event.start,
-      end: event.metadata.eventEnd || event.end,
-    };
+    const eventStart = event.metadata.eventStart || event.start;
+    const eventEnd = event.metadata.eventEnd || event.end;
+    const toISO = (dt: DateTime) => dt.toFormat("yyyy-MM-dd'T'HH:mm");
     const dialogRef = this.dialog.open(AddEditEventDialogComponent, {
       data: {
         mode: 'edit',
-        event: realEvent as any as EventData,
+        event: {
+          title: event.title,
+          start: toISO(eventStart),
+          end: toISO(eventEnd),
+          color: event.color,
+        } satisfies EventData,
       } as EventDialogData,
     });
 

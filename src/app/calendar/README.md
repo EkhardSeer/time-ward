@@ -213,6 +213,27 @@ providers: [{ provide: CALENDAR_I18N, useValue: MY_I18N }];
 
 ---
 
+## Architecture — Layout Engines
+
+The calendar uses three **pure layout engines** (no Angular dependency) that convert `CalendarEvent[]` into `PositionedEvent[]` with CSS positioning data:
+
+| Class                 | View  | Key method      | Grid                                       |
+| --------------------- | ----- | --------------- | ------------------------------------------ |
+| `CalendarDayLayout`   | Day   | `layoutDay()`   | 1 column × 96 rows (15-min slots)          |
+| `CalendarWeekLayout`  | Week  | `layoutWeek()`  | 7 columns × 96 rows (15-min slots)         |
+| `CalendarMonthLayout` | Month | `layoutMonth()` | 7 columns × N week-rows (max 4 events/day) |
+
+All three extend `CalendarLayoutBase`, which provides:
+
+- **Grid constants** — `MAX_ROWS` (96), `ROWS_PER_HOUR` (4)
+- **Builder helpers** — `buildPositionLayout()`, `buildSizing()`, `buildViewMetadata()`
+- **Column assignment** — `assignColumns()` — greedy algorithm that places overlapping events side-by-side in sub-columns
+- **Row math** — `timeToRow()`, `durationToRowSpan()`
+
+All layout classes are re-exported from `calendar-layout.ts` for unified access.
+
+---
+
 ## Color Picker
 
 The `ColorPickerComponent` is used internally in the add/edit dialog and inline sidebar editor, but can also be used standalone:
