@@ -107,7 +107,7 @@
   .nav-group {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 
     button[mat-mini-fab] {
       --mdc-fab-small-container-color: var(--mat-sys-secondary-container);
@@ -118,8 +118,7 @@
   .header-date {
     font-size: 1.05em;
     white-space: nowrap;
-    width: 260px;
-    text-align: center;
+    margin-left: 4px;
 
     .week-badge {
       font-size: 0.75em;

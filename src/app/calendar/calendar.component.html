@@ -7,6 +7,9 @@
         <button mat-mini-fab (click)="previous()">
           <mat-icon>chevron_left</mat-icon>
         </button>
+        <button mat-mini-fab (click)="next()">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
         <span class="header-date">
           @if (view() === 'day') {
             {{ date().setLocale(i18n.locale).toFormat('cccc d MMMM yyyy') }}
@@ -18,9 +21,6 @@
             {{ date().setLocale(i18n.locale).toFormat('MMMM yyyy') }}
           }
         </span>
-        <button mat-mini-fab (click)="next()">
-          <mat-icon>chevron_right</mat-icon>
-        </button>
       </div>
       <span class="header-spacer"></span>
       @if (showViewToggle()) {
