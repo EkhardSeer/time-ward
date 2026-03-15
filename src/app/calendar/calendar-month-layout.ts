@@ -16,7 +16,6 @@ interface MonthLayoutContext {
   rowHeightPercent: number;
   dayWidth: number;
   rowsPerDay: RowState[][][];
-  totalEventCountPerDay: number[][];
   hiddenEventsMap: Map<string, { count: number; weekIndex: number; dayKey: number }>;
   positioned: PositionedEvent[];
 }
@@ -96,7 +95,6 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
       rowHeightPercent: weekHeightPercent / 4,
       dayWidth: 100 / 7,
       rowsPerDay: weeks.map(() => Array.from({ length: 7 }, () => Array(10).fill(null))),
-      totalEventCountPerDay: weeks.map(() => Array(7).fill(0)),
       hiddenEventsMap: new Map(),
       positioned: [],
     };
@@ -290,7 +288,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     const dayKey =
       range.startWeekIndex === range.endWeekIndex ? range.startDayIndex : seg.firstDayIndex;
 
-    if (ctx.totalEventCountPerDay[seg.weekIndex][dayKey] >= this.MAX_VISIBLE_EVENTS_PER_ROW) {
+    if (weekAssignedRow >= this.MAX_VISIBLE_EVENTS_PER_ROW) {
       const mapKey = `${seg.weekIndex}-${dayKey}`;
       const existing = ctx.hiddenEventsMap.get(mapKey);
       if (existing) {
@@ -301,7 +299,6 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
       return;
     }
 
-    ctx.totalEventCountPerDay[seg.weekIndex][dayKey]++;
     ctx.positioned.push({
       ...event,
       layout,

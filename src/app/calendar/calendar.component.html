@@ -108,7 +108,7 @@
                 (mouseenter)="hoveredWeekIndex.set(weekIndex)"
                 (mouseleave)="hoveredWeekIndex.set(null)"
               >
-                <span class="week-label">W{{ week[0].weekNumber }}</span>
+                <span class="week-label">{{ i18n.weekPrefix }}{{ week[0].weekNumber }}</span>
               </button>
             }
           </div>
