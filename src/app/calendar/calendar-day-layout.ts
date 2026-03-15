@@ -2,6 +2,12 @@ import { DateTime } from 'luxon';
 import { CalendarEvent, PositionedEvent } from './calendar-event';
 import { CalendarLayoutBase } from './calendar-layout-base';
 
+interface DaySlice {
+  event: CalendarEvent;
+  startRow: number;
+  rowSpan: number;
+}
+
 /**
  * Layout engine for the single-day calendar view.
  *
@@ -11,42 +17,49 @@ import { CalendarLayoutBase } from './calendar-layout-base';
  * inherited greedy column-assignment algorithm.
  */
 export class CalendarDayLayout extends CalendarLayoutBase {
-  /**
-   * Layout events for a single day view.
-   * Overlapping events are placed side-by-side within the full column width.
-   */
+  /** Layout events for a single day view. */
   layoutDay(events: CalendarEvent[], day: DateTime): PositionedEvent[] {
+    const slices = this.collectSlices(events, day);
+    slices.sort((a, b) =>
+      a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
+    );
+    return this.positionSlices(slices);
+  }
+
+  /** Clip events to the day boundaries and convert to grid slices. */
+  private collectSlices(events: CalendarEvent[], day: DateTime): DaySlice[] {
     const dayStart = day.startOf('day');
     const dayEnd = day.endOf('day');
-
-    const slices: Array<{ event: CalendarEvent; startRow: number; rowSpan: number }> = [];
+    const slices: DaySlice[] = [];
     for (const event of events) {
       if (event.end <= dayStart || event.start >= dayEnd) continue;
       const clippedStart = event.start < dayStart ? dayStart : event.start;
       const clippedEnd = event.end > dayEnd ? dayEnd : event.end;
-      const startRow = this.timeToRow(clippedStart);
-      const rowSpan = this.durationToRowSpan(clippedStart, clippedEnd);
-      slices.push({ event, startRow, rowSpan });
+      slices.push({
+        event,
+        startRow: this.timeToRow(clippedStart),
+        rowSpan: this.durationToRowSpan(clippedStart, clippedEnd),
+      });
     }
+    return slices;
+  }
 
-    slices.sort((a, b) =>
-      a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
-    );
-
+  /** Assign sub-columns and build positioned events. */
+  private positionSlices(slices: DaySlice[]): PositionedEvent[] {
     const columns = this.assignColumns(slices);
-    const positioned: PositionedEvent[] = [];
-
-    for (let si = 0; si < slices.length; si++) {
-      const { event, startRow, rowSpan } = slices[si];
-      const { colIndex, totalColumns } = columns[si];
-      const paddingLeft = colIndex === 0 ? 6 : 1;
-      const paddingRight = colIndex === totalColumns - 1 ? 6 : 1;
-      const left = colIndex * (100 / totalColumns);
-      const width = 100 / totalColumns;
-
-      positioned.push({
+    return slices.map((slice, i) => {
+      const { event, startRow, rowSpan } = slice;
+      const { colIndex, totalColumns } = columns[i];
+      return {
         ...event,
-        layout: this.buildPositionLayout(left, width, startRow, 0, 1, 1),
+        layout: this.buildPositionLayout(
+          colIndex * (100 / totalColumns),
+          100 / totalColumns,
+          startRow,
+          0,
+          1,
+          1,
+        ),
         sizing: this.buildSizing({
           heightPercent: rowSpan * (100 / this.MAX_ROWS),
           topPercent: startRow * (100 / this.MAX_ROWS),
@@ -57,12 +70,10 @@ export class CalendarDayLayout extends CalendarLayoutBase {
           event.start,
           event.end,
           rowSpan,
-          paddingLeft,
-          paddingRight,
+          colIndex === 0 ? 6 : 1,
+          colIndex === totalColumns - 1 ? 6 : 1,
         ),
-      });
-    }
-
-    return positioned;
+      };
+    });
   }
 }

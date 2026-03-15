@@ -25,6 +25,9 @@ export const DEFAULT_DURATIONS: DurationOption[] = [
   { minutes: 240, label: '4 h' },
 ];
 
+const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
+const MIN_DURATION_MINUTES = 15;
+
 /**
  * Start/end date-time range picker with duration quick-select chips.
  * Strings are sourced from CALENDAR_I18N — override the token to customise labels.
@@ -91,7 +94,7 @@ export const DEFAULT_DURATIONS: DurationOption[] = [
             <button
               type="button"
               class="dur-chip"
-              [class.dur-chip-active]="currentDurationMinutes === d.minutes"
+              [class.dur-chip-active]="durationMinutes() === d.minutes"
               (click)="setDuration(d.minutes)"
             >
               {{ d.label }}
@@ -214,72 +217,75 @@ export class EventTimeRangeComponent {
 
   readonly durations: DurationOption[] = DEFAULT_DURATIONS;
 
+  /** Parsed start DateTime — used as [min] on the end datepicker. */
+  startDt = computed(() => {
+    const dt = this.parseDateTime(this.start());
+    return dt.isValid ? dt : null;
+  });
+
   /** True when both datetimes are valid and end is strictly after start. */
   valid = computed(() => {
-    const s = this.toDt(this.start());
-    const e = this.toDt(this.end());
-    return s.isValid && e.isValid && e.toMillis() > s.toMillis();
+    const s = this.parseDateTime(this.start());
+    const e = this.parseDateTime(this.end());
+    return s.isValid && e.isValid && e > s;
+  });
+
+  /** Current event duration in minutes, or null if undetermined. */
+  durationMinutes = computed(() => {
+    const s = this.parseDateTime(this.start());
+    const e = this.parseDateTime(this.end());
+    if (!s.isValid || !e.isValid) return null;
+    const diff = e.diff(s, 'minutes').minutes;
+    return diff > 0 ? diff : null;
   });
 
   constructor() {
     effect(() => this.validChange.emit(this.valid()));
   }
 
-  /** Parsed start as a Luxon DateTime — used as [min] on the end datepicker to gray out earlier dates. */
-  startDt = computed(() => {
-    const dt = this.toDt(this.start());
-    return dt.isValid ? dt : null;
-  });
-
-  /** Returns the current event duration in minutes, or null if undetermined. */
-  get currentDurationMinutes(): number | null {
-    const s = this.toDt(this.start());
-    const e = this.toDt(this.end());
-    if (!s.isValid || !e.isValid) return null;
-    const diff = e.diff(s, 'minutes').minutes;
-    return diff > 0 ? diff : null;
-  }
-
   /** Sets end = start + given minutes. */
   setDuration(minutes: number): void {
-    const s = this.toDt(this.start());
+    const s = this.parseDateTime(this.start());
     if (!s.isValid) return;
-    this.end.set(s.plus({ minutes }).toFormat("yyyy-MM-dd'T'HH:mm"));
+    this.end.set(this.formatIso(s.plus({ minutes })));
   }
 
   /** Updates start and preserves the current duration by shifting end accordingly. */
   onStartChange(newStart: unknown): void {
-    const s = this.toDt(newStart);
+    const s = this.parseDateTime(newStart);
     if (!s.isValid) return;
-    const duration = this.currentDurationMinutes;
-    this.start.set(s.toFormat("yyyy-MM-dd'T'HH:mm"));
+    const duration = this.durationMinutes();
+    this.start.set(this.formatIso(s));
     if (duration !== null) {
-      this.end.set(s.plus({ minutes: duration }).toFormat("yyyy-MM-dd'T'HH:mm"));
+      this.end.set(this.formatIso(s.plus({ minutes: duration })));
     }
   }
 
   /**
-   * Clamps end to at least start + 15 min.
-   * When clamping is required we force-close the timepicker first and defer
-   * the signal update to the next task, so Angular's writeValue runs outside
-   * the picker's own event cycle (where it would otherwise be suppressed).
+   * Clamps end to at least start + MIN_DURATION_MINUTES.
+   * When clamping we force-close the timepicker first and defer the signal
+   * update so Angular's writeValue runs outside the picker's event cycle.
    */
   onEndChange(newEnd: unknown): void {
-    const s = this.toDt(this.start());
-    const e = this.toDt(newEnd);
+    const s = this.parseDateTime(this.start());
+    const e = this.parseDateTime(newEnd);
     if (!s.isValid || !e.isValid) return;
-    if (e.toMillis() <= s.toMillis()) {
-      const clampedISO = s.plus({ minutes: 15 }).toFormat("yyyy-MM-dd'T'HH:mm");
+    if (e <= s) {
+      const clamped = this.formatIso(s.plus({ minutes: MIN_DURATION_MINUTES }));
       this._endTimePicker?.close();
-      setTimeout(() => this.end.set(clampedISO));
+      setTimeout(() => this.end.set(clamped));
     } else {
-      this.end.set(e.toFormat("yyyy-MM-dd'T'HH:mm"));
+      this.end.set(this.formatIso(e));
     }
   }
 
   /** Normalises a picker-emitted DateTime or an ISO string into a Luxon DateTime. */
-  private toDt(val: unknown): DateTime {
-    if (DateTime.isDateTime(val)) return val as DateTime;
-    return DateTime.fromISO(val as string);
+  private parseDateTime(value: unknown): DateTime {
+    if (DateTime.isDateTime(value)) return value as DateTime;
+    return DateTime.fromISO(value as string);
+  }
+
+  private formatIso(dt: DateTime): string {
+    return dt.toFormat(ISO_FORMAT);
   }
 }

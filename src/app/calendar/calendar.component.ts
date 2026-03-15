@@ -33,18 +33,7 @@ import { ColorPickerComponent } from './color-picker.component';
 import { EventTimeRangeComponent } from './event-time-range.component';
 import { EVENT_MOCK } from './event-mock';
 
-export type EventTypes = 'SETUP' | 'WORK' | 'BREAK' | 'MEETING' | 'OTHER' | 'SHIFT';
-export type EVENT_COLORS = {
-  [key in EventTypes]: string;
-};
-export const EVENT_COLORS: EVENT_COLORS = {
-  SETUP: '#1976d2',
-  WORK: '#388e3c',
-  BREAK: '#fbc02d',
-  MEETING: '#d32f2f',
-  OTHER: '#7b1fa2',
-  SHIFT: '#00796b',
-};
+const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
 
 @Component({
   selector: 'app-calendar',
@@ -133,14 +122,10 @@ export class CalendarComponent implements OnInit {
 
     // Build edit draft for built-in panel (skipped when in readonly mode)
     if (!this.readonly() && !this.detailsTemplate()) {
-      const toISO = (dt: DateTime) => dt.toFormat("yyyy-MM-dd'T'HH:mm");
       this._editingSourceId = sourceId;
-      this.editDraft.set({
-        title: realEvent.title,
-        start: toISO(realEvent.start),
-        end: toISO(realEvent.end),
-        color: realEvent.color,
-      });
+      this.editDraft.set(
+        this.toEventData(realEvent.title, realEvent.start, realEvent.end, realEvent.color),
+      );
     }
   }
 
@@ -183,14 +168,8 @@ export class CalendarComponent implements OnInit {
     this.selectedEvent.set(event);
     this.eventSelected.emit(event);
     if (!this.readonly() && !this.detailsTemplate()) {
-      const toISO = (dt: DateTime) => dt.toFormat("yyyy-MM-dd'T'HH:mm");
       this._editingSourceId = event.id;
-      this.editDraft.set({
-        title: event.title,
-        start: toISO(event.start),
-        end: toISO(event.end),
-        color: event.color,
-      });
+      this.editDraft.set(this.toEventData(event.title, event.start, event.end, event.color));
     }
   }
 
@@ -227,11 +206,7 @@ export class CalendarComponent implements OnInit {
       }
     }, 100);
   }
-  removeEvent(_t56: PositionedEvent) {
-    const sourceId = (_t56.metadata?.sourceId as string | undefined) ?? _t56.id;
-    this._ownEvents.update((events) => events.filter((e) => e.id !== sourceId));
-    this.eventDeleted.emit(sourceId);
-  }
+
   date = signal(DateTime.now());
 
   weeks = signal<Array<Array<DateTime>>>([]);
@@ -257,7 +232,6 @@ export class CalendarComponent implements OnInit {
   hoveredEventId = signal<string | null>(null);
   hoveredTimeSlot = signal<{ day: DateTime; row: number } | null>(null);
   hoveredWeekIndex = signal<number | null>(null);
-  weekHeight = computed(() => 100 / this.weeks().length);
 
   // Generate hourly time markers for week view (0-24)
   hourMarkers = computed(() => {
@@ -356,16 +330,6 @@ export class CalendarComponent implements OnInit {
     else this.dayLayout(this.date());
   }
 
-  hasEventOnDay(day: DateTime): boolean {
-    return this.positionedEvents().some((event) => {
-      const weekIndex = this.weeks().findIndex((week) => week.some((d) => d.hasSame(day, 'day')));
-      if (weekIndex !== event.layout.weekIndex) return false;
-      const dayIndex = this.weeks()[weekIndex].findIndex((d) => d.hasSame(day, 'day'));
-      const col = dayIndex + 1;
-      return col >= event.layout.colStart && col < event.layout.colStart + event.layout.colSpan;
-    });
-  }
-
   onDayMouseMove(event: MouseEvent, day: DateTime) {
     const el = event.currentTarget as HTMLElement;
     const row = Math.floor((event.offsetY / el.clientHeight) * 96);
@@ -383,91 +347,46 @@ export class CalendarComponent implements OnInit {
   }
 
   addEvent(day?: DateTime) {
-    const slot = this.hoveredTimeSlot();
-    let start: DateTime;
-    if (slot && day) {
-      start = this.rowToDateTime(day, slot.row);
-    } else if (day) {
-      start = day.set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
-    } else {
-      start = DateTime.now().startOf('hour').set({ hour: 10 });
-    }
+    const start = this.resolveNewEventStart(day);
     const end = start.plus({ hours: 1 });
-    const toISO = (dt: DateTime) => dt.toFormat("yyyy-MM-dd'T'HH:mm");
     const dialogRef = this.dialog.open(AddEditEventDialogComponent, {
       data: {
         mode: 'add',
-        event: {
-          title: '',
-          start: toISO(start),
-          end: toISO(end),
-          color: '#1976d2',
-        } as EventData,
+        event: this.toEventData('', start, end, '#1976d2'),
       } as EventDialogData,
     });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        const newEvent: CalendarEvent = {
-          id: crypto.randomUUID(),
-          title: result.event.title,
-          start: DateTime.fromISO(result.event.start),
-          end: DateTime.fromISO(result.event.end),
-          color: result.event.color,
-        };
-        this._ownEvents.update((events) => [...events, newEvent]);
-        this.eventAdded.emit(newEvent);
-      }
-    });
+    dialogRef.afterClosed().subscribe((result) => this.handleAddResult(result));
   }
 
-  openEditEventDialog(event: PositionedEvent) {
-    if (this.readonly()) return;
-    const eventStart = event.metadata.eventStart || event.start;
-    const eventEnd = event.metadata.eventEnd || event.end;
-    const toISO = (dt: DateTime) => dt.toFormat("yyyy-MM-dd'T'HH:mm");
-    const dialogRef = this.dialog.open(AddEditEventDialogComponent, {
-      data: {
-        mode: 'edit',
-        event: {
-          title: event.title,
-          start: toISO(eventStart),
-          end: toISO(eventEnd),
-          color: event.color,
-        } satisfies EventData,
-      } as EventDialogData,
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        if (result.delete) {
-          const sourceId = event.metadata.sourceId ?? event.id;
-          this._ownEvents.update((events) => events.filter((e) => e.id !== sourceId));
-          this.eventDeleted.emit(sourceId);
-        } else {
-          const sourceId = event.metadata.sourceId ?? event.id;
-          const updatedEvent: CalendarEvent = {
-            id: sourceId,
-            title: result.event.title,
-            start: DateTime.fromISO(result.event.start),
-            end: DateTime.fromISO(result.event.end),
-            color: result.event.color,
-          };
-          this._ownEvents.update((events) => {
-            const index = events.findIndex((e) => e.id === sourceId);
-            if (index !== -1) events[index] = updatedEvent;
-            return [...events];
-          });
-          this.eventUpdated.emit(updatedEvent);
-        }
-      }
-    });
+  private resolveNewEventStart(day?: DateTime): DateTime {
+    const slot = this.hoveredTimeSlot();
+    if (slot && day) return this.rowToDateTime(day, slot.row);
+    if (day) return day.set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
+    return DateTime.now().startOf('hour').set({ hour: 10 });
   }
 
-  dayFraction(date: DateTime) {
-    return (date.hour * 60 + date.minute) / (24 * 60);
+  private handleAddResult(result: { event: EventData } | null): void {
+    if (!result) return;
+    const newEvent = this.toCalendarEvent(crypto.randomUUID(), result.event);
+    this._ownEvents.update((events) => [...events, newEvent]);
+    this.eventAdded.emit(newEvent);
   }
-  durationFraction(start: DateTime, end: DateTime) {
-    return end.diff(start, 'minutes').minutes / (24 * 60);
+
+  private formatIso(dt: DateTime): string {
+    return dt.toFormat(ISO_FORMAT);
+  }
+
+  private toEventData(title: string, start: DateTime, end: DateTime, color: string): EventData {
+    return { title, start: this.formatIso(start), end: this.formatIso(end), color };
+  }
+
+  private toCalendarEvent(id: string, data: EventData): CalendarEvent {
+    return {
+      id,
+      title: data.title,
+      start: DateTime.fromISO(data.start),
+      end: DateTime.fromISO(data.end),
+      color: data.color,
+    };
   }
 }
