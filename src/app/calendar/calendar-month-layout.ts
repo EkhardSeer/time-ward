@@ -348,9 +348,8 @@ export class CalendarMonthLayout {
 
         totalEventCountPerDay[weekSpan.weekIndex][dayKey]++;
 
-        // Calculate event height: fuller height for first event in slot, constrained for subsequent
-        const weekEventHeightPercent =
-          currentDayTotal < 1 ? rowHeightPercent * 0.95 : rowHeightPercent * 0.7;
+        // Calculate event height: consistent height for all events in slot
+        const weekEventHeightPercent = rowHeightPercent * 0.7;
 
         const sizing = this.buildMonthSizing(topPercent, weekEventHeightPercent);
 

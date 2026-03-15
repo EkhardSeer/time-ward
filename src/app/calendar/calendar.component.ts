@@ -266,6 +266,7 @@ export class CalendarComponent implements OnInit {
   });
   hoveredEventId = signal<string | null>(null);
   hoveredTimeSlot = signal<{ day: DateTime; row: number } | null>(null);
+  hoveredWeekIndex = signal<number | null>(null);
   weekHeight = computed(() => 100 / this.weeks().length);
 
   // Generate hourly time markers for week view (0-24)

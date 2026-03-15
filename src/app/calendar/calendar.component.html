@@ -125,6 +125,8 @@
                 class="week-marker"
                 [style.height.%]="100 / weeks().length"
                 (click)="weekLayout(week[0])"
+                (mouseenter)="hoveredWeekIndex.set(weekIndex)"
+                (mouseleave)="hoveredWeekIndex.set(null)"
               >
                 <span class="week-label">W{{ week[0].weekNumber }}</span>
               </button>
@@ -146,10 +148,11 @@
               <div
                 class="day"
                 [class.month-view]="view() === 'month'"
+                [class.week-row-hovered]="view() === 'month' && hoveredWeekIndex() === weekIndex"
                 [style.gridColumn]="view() === 'month' ? '' : view() === 'day' ? '1' : dayIndex + 1"
                 (mousemove)="(view() === 'week' || view() === 'day') && onDayMouseMove($event, day)"
                 (mouseleave)="onDayMouseLeave()"
-                (click)="readonly() ? null : addEvent(day)"
+                (click)="view() === 'month' ? dayLayout(day) : readonly() ? null : addEvent(day)"
               >
                 @if (
                   (view() === 'week' || view() === 'day') &&
