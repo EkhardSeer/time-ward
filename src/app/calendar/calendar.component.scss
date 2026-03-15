@@ -152,13 +152,12 @@
   flex: 1;
   overflow: hidden;
   min-width: 0;
+}
 
-  &.week-view,
-  &.day-view {
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-gutter: stable;
-  }
+:host(:is(.week, .day)) .scroll-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 .calendar-subheader {
@@ -178,7 +177,7 @@
   min-width: 0;
 }
 
-.scroll-container:not(.week-view):not(.day-view) > .calendar-body {
+:host(.month) .calendar-body {
   flex: 1;
   min-height: 0;
 }
@@ -289,23 +288,18 @@
   position: relative;
   min-height: 0;
   min-width: 0;
+}
 
-  &.week-view {
-    grid-template-rows: repeat(96, 30px);
-    overflow: visible;
-    height: 2880px;
-    min-height: auto;
-    max-width: 100%;
-  }
+:host(:is(.week, .day)) .calendar {
+  grid-template-rows: repeat(96, 30px);
+  overflow: visible;
+  height: 2880px;
+  min-height: auto;
+  max-width: 100%;
+}
 
-  &.day-view {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(96, 30px);
-    overflow: visible;
-    height: 2880px;
-    min-height: auto;
-    max-width: 100%;
-  }
+:host(.day) .calendar {
+  grid-template-columns: 1fr;
 }
 
 .hour-line {
@@ -336,13 +330,11 @@
   z-index: 2;
 }
 
-.day.month-view {
+:host(.month) .day {
   overflow: hidden;
 }
 
-// In week/day view, each day column should span all 96 rows
-.calendar.week-view .day,
-.calendar.day-view .day {
+:host(:is(.week, .day)) .calendar .day {
   grid-row: 1 / -1;
   padding-top: 0;
   padding-left: 2px;
@@ -363,12 +355,11 @@
   z-index: 3;
 }
 
-.calendar.week-view .day:first-child,
-.calendar.day-view .day:first-child {
+:host(:is(.week, .day)) .calendar .day:first-child {
   border-left: 1px solid var(--mat-sys-outline-variant);
 }
 
-.day.month-view:hover {
+:host(.month) .day:hover {
   background-color: rgba(128, 128, 128, 0.2);
 }
 
@@ -412,15 +403,6 @@
   }
 }
 
-.week-number {
-  position: absolute;
-  bottom: 2px;
-  left: 2px;
-  font-size: 10px;
-  color: var(--mat-sys-on-surface-variant);
-  cursor: pointer;
-}
-
 .fab {
   position: absolute;
   bottom: 16px;
@@ -439,14 +421,12 @@
   position: absolute;
 }
 
-.calendar.week-view .event,
-.calendar.day-view .event {
+:host(:is(.week, .day)) .event {
   position: absolute;
   overflow: visible;
 }
 
-.calendar.week-view .event-title,
-.calendar.day-view .event-title {
+:host(:is(.week, .day)) .event-title {
   position: absolute;
   top: clamp(0px, calc(var(--scroll-top, 0px) - var(--event-top, 0px)), calc(100% - 1.5em - 4px));
   left: 0;
@@ -462,10 +442,6 @@
   filter: brightness(1.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10;
-}
-
-.calendar.month-view .event {
-  position: absolute;
 }
 
 .more-events {

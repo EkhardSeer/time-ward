@@ -9,7 +9,7 @@ import {
   signal,
   TemplateRef,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { NgStyle, NgTemplateOutlet } from '@angular/common';
 import { DateTime } from 'luxon';
 import { CalendarWeekLayout } from './calendar-week-layout';
 import { CalendarMonthLayout } from './calendar-month-layout';
@@ -39,7 +39,10 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
   selector: 'app-calendar',
   templateUrl: './calendar.component.html',
   styleUrls: ['./calendar.component.scss'],
-  host: { style: 'display:flex;width:100%;height:100%;' },
+  host: {
+    style: 'display:flex;width:100%;height:100%;',
+    '[class]': 'view()',
+  },
   imports: [
     MatButtonModule,
     MatButtonToggleModule,
@@ -50,6 +53,7 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
     MatInputModule,
     FormsModule,
     NgTemplateOutlet,
+    NgStyle,
     ColorPickerComponent,
     EventTimeRangeComponent,
   ],
@@ -196,9 +200,7 @@ export class CalendarComponent implements OnInit {
 
   private scrollToBusinessHours() {
     setTimeout(() => {
-      const scrollContainer = document.querySelector(
-        '.scroll-container.week-view, .scroll-container.day-view',
-      ) as HTMLElement;
+      const scrollContainer = document.querySelector('.scroll-container') as HTMLElement;
       if (scrollContainer) {
         // 7:30 AM = row 30 (7.5 hours * 4 rows per hour)
         // Each row is 30px, so scroll to: 30 * 30 = 900px
@@ -232,6 +234,7 @@ export class CalendarComponent implements OnInit {
   hoveredEventId = signal<string | null>(null);
   hoveredTimeSlot = signal<{ day: DateTime; row: number } | null>(null);
   hoveredWeekIndex = signal<number | null>(null);
+  isTimeView = computed(() => this.view() !== 'month');
 
   // Generate hourly time markers for week view (0-24)
   hourMarkers = computed(() => {
@@ -370,6 +373,30 @@ export class CalendarComponent implements OnInit {
     const newEvent = this.toCalendarEvent(crypto.randomUUID(), result.event);
     this._ownEvents.update((events) => [...events, newEvent]);
     this.eventAdded.emit(newEvent);
+  }
+
+  eventStyles(event: PositionedEvent): Record<string, string> {
+    if (this.isTimeView()) {
+      const padL = event.metadata.paddingLeft ?? 6;
+      const padR = event.metadata.paddingRight ?? 6;
+      const rowPct = event.layout.row * (100 / 96);
+      const spanPct = (event.metadata.rowSpan || 1) * (100 / 96);
+      return {
+        '--event-top': event.layout.row * 30 + 'px',
+        left: `calc(${event.layout.left}% + ${padL}px)`,
+        width: `calc(${event.layout.width}% - ${padL + padR}px)`,
+        top: `calc(${rowPct}% + 2px)`,
+        height: `calc(${spanPct}% - 4px)`,
+        'background-color': event.color,
+      };
+    }
+    return {
+      left: `calc(${event.layout.left}% + 4px)`,
+      width: `calc(${event.layout.width}% - 8px)`,
+      top: event.sizing.topPercent + '%',
+      height: event.sizing.heightPercentMonth + '%',
+      'background-color': event.color,
+    };
   }
 
   private formatIso(dt: DateTime): string {

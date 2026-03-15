@@ -37,15 +37,10 @@
     </mat-toolbar>
 
     <!-- Calendar Grid with Time Axis / Week Axis -->
-    <div
-      class="scroll-container"
-      [class.week-view]="view() === 'week'"
-      [class.day-view]="view() === 'day'"
-      (scroll)="onScroll($event)"
-    >
+    <div class="scroll-container" (scroll)="onScroll($event)">
       <!-- Weekday Header — sticky within the scroll container -->
       <div class="calendar-subheader">
-        @if (view() === 'week' || view() === 'day') {
+        @if (isTimeView()) {
           <button
             mat-button
             class="time-axis-header week-num-btn"
@@ -87,12 +82,8 @@
       </div>
 
       <!-- Scrollable content body -->
-      <div
-        class="calendar-body"
-        [class.week-view]="view() === 'week'"
-        [class.day-view]="view() === 'day'"
-      >
-        @if (view() === 'week' || view() === 'day') {
+      <div class="calendar-body">
+        @if (isTimeView()) {
           <div class="time-axis">
             @for (hour of hourMarkers(); track hour) {
               @if (hour < 24) {
@@ -124,29 +115,19 @@
         }
         <div
           class="calendar"
-          [class.week-view]="view() === 'week'"
-          [class.day-view]="view() === 'day'"
-          [style.gridTemplateRows]="
-            view() === 'week' || view() === 'day'
-              ? 'repeat(96, 30px)'
-              : 'repeat(' + weeks().length + ', 1fr)'
-          "
+          [style.gridTemplateRows]="!isTimeView() ? 'repeat(' + weeks().length + ', 1fr)' : null"
         >
           @for (week of weeks(); track weekIndex; let weekIndex = $index) {
             @for (day of week; track dayIndex; let dayIndex = $index) {
               <div
                 class="day"
-                [class.month-view]="view() === 'month'"
-                [class.week-row-hovered]="view() === 'month' && hoveredWeekIndex() === weekIndex"
-                [style.gridColumn]="view() === 'month' ? '' : view() === 'day' ? '1' : dayIndex + 1"
-                (mousemove)="(view() === 'week' || view() === 'day') && onDayMouseMove($event, day)"
+                [class.week-row-hovered]="!isTimeView() && hoveredWeekIndex() === weekIndex"
+                [style.gridColumn]="!isTimeView() ? '' : view() === 'day' ? '1' : dayIndex + 1"
+                (mousemove)="isTimeView() && onDayMouseMove($event, day)"
                 (mouseleave)="onDayMouseLeave()"
-                (click)="view() === 'month' ? dayLayout(day) : readonly() ? null : addEvent(day)"
+                (click)="!isTimeView() ? dayLayout(day) : readonly() ? null : addEvent(day)"
               >
-                @if (
-                  (view() === 'week' || view() === 'day') &&
-                  hoveredTimeSlot()?.day?.hasSame(day, 'day')
-                ) {
+                @if (isTimeView() && hoveredTimeSlot()?.day?.hasSame(day, 'day')) {
                   <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
                 }
                 <span class="day-number">{{ day.day }}</span>
@@ -154,8 +135,8 @@
             }
           }
 
-          <!-- Horizontal hour lines for week/day view -->
-          @if (view() === 'week' || view() === 'day') {
+          <!-- Horizontal grid lines for week/day view -->
+          @if (isTimeView()) {
             @for (hour of hourMarkers().slice(1); track hour) {
               <div
                 class="hour-line"
@@ -163,10 +144,6 @@
                 [style.gridColumn]="'1 / -1'"
               ></div>
             }
-          }
-
-          <!-- Horizontal 15-minute lines for week/day view -->
-          @if (view() === 'week' || view() === 'day') {
             @for (row of minuteMarkers(); track row) {
               <div
                 class="minute-line"
@@ -179,35 +156,10 @@
           @for (event of positionedEvents(); track event.id) {
             <div
               class="event"
-              [style.--event-top]="event.layout.row * 30 + 'px'"
               [class.hovered]="
                 (hoveredEventId() ?? selectedEvent()?.id) === (event.metadata.sourceId ?? event.id)
               "
-              [style.left]="
-                view() === 'week' || view() === 'day'
-                  ? 'calc(' + event.layout.left + '% + ' + (event.metadata.paddingLeft ?? 6) + 'px)'
-                  : 'calc(' + event.layout.left + '% + 4px)'
-              "
-              [style.width]="
-                view() === 'week' || view() === 'day'
-                  ? 'calc(' +
-                    event.layout.width +
-                    '% - ' +
-                    ((event.metadata.paddingLeft ?? 6) + (event.metadata.paddingRight ?? 6)) +
-                    'px)'
-                  : 'calc(' + event.layout.width + '% - 8px)'
-              "
-              [style.top]="
-                view() === 'week' || view() === 'day'
-                  ? 'calc(' + event.layout.row * (100 / 96) + '% + 2px)'
-                  : event.sizing.topPercent + '%'
-              "
-              [style.height]="
-                view() === 'week' || view() === 'day'
-                  ? 'calc(' + (event.metadata.rowSpan || 1) * (100 / 96) + '% - 4px)'
-                  : event.sizing.heightPercentMonth + '%'
-              "
-              [style.backgroundColor]="event.color"
+              [ngStyle]="eventStyles(event)"
               (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
               (mouseleave)="hoveredEventId.set(null)"
               (click)="onEventClick(event)"
