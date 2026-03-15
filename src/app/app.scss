@@ -1,0 +1,47 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 52px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.app-header-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-right: 16px;
+  color: var(--mat-sys-on-primary);
+}
+
+.app-header-nav {
+  display: flex;
+  gap: 4px;
+
+  button {
+    color: rgba(255, 255, 255, 0.85);
+    &.active-nav {
+      color: white;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+  }
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  padding: 20px;
+}

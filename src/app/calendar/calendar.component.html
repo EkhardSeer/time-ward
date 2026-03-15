@@ -1,0 +1,303 @@
+<div
+  class="calendar-wrapper"
+  style="
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+  "
+>
+  <!-- Left: calendar -->
+  <div style="position: relative; display: flex; flex-direction: column; height: 100%; width: 100%">
+    <!-- Toolbar -->
+    <mat-toolbar color="primary" class="calendar-header">
+      <div class="nav-group">
+        <button mat-mini-fab (click)="previous()">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="header-date">
+          @if (view() === 'day') {
+            {{ date().setLocale(i18n.locale).toFormat('cccc d MMMM yyyy') }}
+          } @else if (view() === 'week') {
+            <span class="week-badge">{{ i18n.weekPrefix }}{{ weeks()[0][0].weekNumber }}</span>
+            {{ weeks()[0][0].setLocale(i18n.locale).toFormat('d MMM') }} –
+            {{ weeks()[0][6].setLocale(i18n.locale).toFormat('d MMM yyyy') }}
+          } @else {
+            {{ date().setLocale(i18n.locale).toFormat('MMMM yyyy') }}
+          }
+        </span>
+        <button mat-mini-fab (click)="next()">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+      <span style="flex: 1"></span>
+      @if (showViewToggle()) {
+        <mat-button-toggle-group [value]="view()" (change)="setView($event.value)">
+          <mat-button-toggle value="month">{{ i18n.viewMonth }}</mat-button-toggle>
+          <mat-button-toggle value="week">{{ i18n.viewWeek }}</mat-button-toggle>
+          <mat-button-toggle value="day">{{ i18n.viewDay }}</mat-button-toggle>
+        </mat-button-toggle-group>
+      }
+    </mat-toolbar>
+
+    <!-- Weekday Header with Time/Week Axis -->
+    <div style="display: flex; gap: 0">
+      @if (view() === 'week' || view() === 'day') {
+        <div
+          class="time-axis-header week-num-btn"
+          (click)="view() === 'week' ? monthLayout() : weekLayout(date())"
+          [title]="
+            view() === 'week'
+              ? date().setLocale(i18n.locale).toFormat('MMMM yyyy')
+              : i18n.weekPrefix + ' ' + date().weekNumber
+          "
+        >
+          @if (view() === 'week') {
+            {{ date().setLocale(i18n.locale).toFormat('MMM') }}
+          } @else {
+            {{ i18n.weekPrefix }}&thinsp;{{ date().weekNumber }}
+          }
+        </div>
+      } @else if (view() === 'month') {
+        <div class="week-axis-header"></div>
+      }
+      @if (view() === 'day') {
+        <div class="weekday-header">
+          <div class="weekday">{{ date().setLocale(i18n.locale).toFormat('cccc d MMMM') }}</div>
+        </div>
+      } @else if (view() === 'week') {
+        <div class="weekday-header">
+          @for (day of weeks()[0]; track day; let i = $index) {
+            <div class="weekday clickable" (click)="dayLayout(day)">
+              {{ day.setLocale(i18n.locale).toFormat('ccc d') }}
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="weekday-header">
+          @for (weekday of weekdays; track weekday) {
+            <div class="weekday">{{ weekday }}</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Calendar Grid with Time Axis / Week Axis -->
+    <div
+      class="scroll-container"
+      [class.week-view]="view() === 'week'"
+      [class.day-view]="view() === 'day'"
+    >
+      @if (view() === 'week' || view() === 'day') {
+        <div class="time-axis">
+          @for (hour of hourMarkers(); track hour) {
+            @if (hour < 24) {
+              <div
+                class="time-marker"
+                [class.first-hour]="hour === 0"
+                [style.gridRow]="hour * 4 + 1 + ' / span 4'"
+              >
+                <span class="time-label">{{ hour }}</span>
+              </div>
+            }
+          }
+        </div>
+      } @else if (view() === 'month') {
+        <div class="week-axis">
+          @for (week of weeks(); track weekIndex; let weekIndex = $index) {
+            <div
+              class="week-marker"
+              [style.height.%]="100 / weeks().length"
+              (click)="weekLayout(week[0])"
+            >
+              <span class="week-label">W{{ week[0].weekNumber }}</span>
+            </div>
+          }
+        </div>
+      }
+      <div
+        class="calendar"
+        [class.week-view]="view() === 'week'"
+        [class.day-view]="view() === 'day'"
+        [style.gridTemplateRows]="
+          view() === 'week' || view() === 'day'
+            ? 'repeat(96, 30px)'
+            : 'repeat(' + weeks().length + ', 1fr)'
+        "
+      >
+        @for (week of weeks(); track weekIndex; let weekIndex = $index) {
+          @for (day of week; track dayIndex; let dayIndex = $index) {
+            <div
+              class="day"
+              [class.month-view]="view() === 'month'"
+              [style.gridColumn]="view() === 'month' ? '' : view() === 'day' ? '1' : dayIndex + 1"
+              (mousemove)="(view() === 'week' || view() === 'day') && onDayMouseMove($event, day)"
+              (mouseleave)="onDayMouseLeave()"
+              (click)="readonly() ? null : addEvent(day)"
+            >
+              @if (
+                (view() === 'week' || view() === 'day') &&
+                hoveredTimeSlot()?.day?.hasSame(day, 'day')
+              ) {
+                <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
+              }
+              <span class="day-number">{{ day.day }}</span>
+            </div>
+          }
+        }
+
+        <!-- Horizontal hour lines for week/day view -->
+        @if (view() === 'week' || view() === 'day') {
+          @for (hour of hourMarkers().slice(1); track hour) {
+            <div
+              class="hour-line"
+              [style.gridRow]="hour * 4 + 1 + ' / span 1'"
+              [style.gridColumn]="'1 / -1'"
+            ></div>
+          }
+        }
+
+        <!-- Horizontal 15-minute lines for week/day view -->
+        @if (view() === 'week' || view() === 'day') {
+          @for (row of minuteMarkers(); track row) {
+            <div
+              class="minute-line"
+              [style.gridRow]="row + ' / span 1'"
+              [style.gridColumn]="'1 / -1'"
+            ></div>
+          }
+        }
+
+        @for (event of positionedEvents(); track event.id) {
+          <div
+            class="event"
+            [class.hovered]="
+              (hoveredEventId() ?? selectedEvent()?.id) === (event.metadata.sourceId ?? event.id)
+            "
+            [style.left]="
+              view() === 'week' || view() === 'day'
+                ? 'calc(' + event.layout.left + '% + ' + (event.metadata.paddingLeft ?? 6) + 'px)'
+                : 'calc(' + event.layout.left + '% + 4px)'
+            "
+            [style.width]="
+              view() === 'week' || view() === 'day'
+                ? 'calc(' +
+                  event.layout.width +
+                  '% - ' +
+                  ((event.metadata.paddingLeft ?? 6) + (event.metadata.paddingRight ?? 6)) +
+                  'px)'
+                : 'calc(' + event.layout.width + '% - 8px)'
+            "
+            [style.top]="
+              view() === 'week' || view() === 'day'
+                ? 'calc(' + event.layout.row * (100 / 96) + '% + 2px)'
+                : event.sizing.topPercent + '%'
+            "
+            [style.height]="
+              view() === 'week' || view() === 'day'
+                ? 'calc(' + (event.metadata.rowSpan || 1) * (100 / 96) + '% - 4px)'
+                : event.sizing.heightPercentMonth + '%'
+            "
+            [style.backgroundColor]="event.color"
+            (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
+            (mouseleave)="hoveredEventId.set(null)"
+            (click)="onEventClick(event)"
+          >
+            @if (!event.metadata.hiddenCount) {
+              <span>{{ event.title }}</span>
+            }
+            @if (event.metadata.hiddenCount) {
+              <span class="more-events">+{{ event.metadata.hiddenCount }} more</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (!readonly() && showFab()) {
+      <button mat-fab color="primary" class="fab" (click)="addEvent()">
+        <mat-icon>add</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (showSidebar() && selectedEvent()) {
+    <div class="event-details-panel">
+      <!-- Sidebar nav header: prev / counter / next / close -->
+      <div class="sidebar-nav-header">
+        <button mat-icon-button (click)="selectPrevEvent()" [title]="'Previous event'">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="sidebar-nav-counter">
+          {{ visibleEvents().indexOf(selectedEvent()!) + 1 }} / {{ visibleEvents().length }}
+        </span>
+        <button mat-icon-button (click)="selectNextEvent()" [title]="'Next event'">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <span class="sidebar-nav-spacer"></span>
+        <button mat-icon-button (click)="closeEditPanel()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      @if (selectedEvent()?.sidebarTemplate) {
+        <!-- Per-event template (highest priority) -->
+        <ng-template
+          [ngTemplateOutlet]="selectedEvent()!.sidebarTemplate!"
+          [ngTemplateOutletContext]="{ $implicit: selectedEvent() }"
+        />
+      } @else if (detailsTemplate()) {
+        <!-- Global fallback template -->
+        <ng-template
+          [ngTemplateOutlet]="detailsTemplate()!"
+          [ngTemplateOutletContext]="{ $implicit: selectedEvent() }"
+        />
+      } @else {
+        <!-- Built-in inline edit form -->
+        <div class="edit-panel-header">
+          <span class="edit-panel-title">{{ i18n.dialogEditTitle }}</span>
+        </div>
+        <div class="edit-panel-body">
+          <mat-form-field class="edit-title-field">
+            <mat-label>{{ i18n.fieldTitle }}</mat-label>
+            <input
+              matInput
+              [ngModel]="editDraft()?.title"
+              (ngModelChange)="setDraftField('title', $event)"
+              required
+              autofocus
+            />
+          </mat-form-field>
+          <app-color-picker
+            [color]="editDraft()?.color ?? '#1976d2'"
+            (colorChange)="setDraftField('color', $event)"
+            [label]="i18n.fieldColor"
+          />
+          <app-event-time-range
+            [start]="editDraft()?.start ?? ''"
+            (startChange)="setDraftField('start', $event)"
+            [end]="editDraft()?.end ?? ''"
+            (endChange)="setDraftField('end', $event)"
+            (validChange)="editTimeRangeValid.set($event)"
+          />
+        </div>
+        <div class="edit-panel-actions">
+          <button mat-button class="btn-danger" (click)="onDeleteEdit()">
+            <mat-icon>delete</mat-icon> {{ i18n.btnDelete }}
+          </button>
+          <span class="edit-panel-spacer"></span>
+          <button
+            mat-flat-button
+            (click)="onSaveEdit()"
+            [disabled]="!editDraft()?.title?.trim() || !editTimeRangeValid()"
+          >
+            {{ i18n.btnSave }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
