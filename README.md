@@ -1,59 +1,100 @@
-# App
+# Time Ward
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.1.
+An Angular application built around a full-featured calendar component. Supports month, week, and day views with event creation, editing, deletion, multi-day spanning, overlap detection, sidebar details panel, custom templates, and full i18n.
 
-## Development server
+Built with [Angular](https://angular.dev) v21 and [Luxon](https://moment.github.io/luxon/) for date handling.
 
-To start a local development server, run:
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (LTS recommended)
+- [Angular CLI](https://angular.dev/tools/cli) v21+
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Development server
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open your browser at `http://localhost:4200/`. The app reloads automatically on file changes.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+### Production build
 
 ```bash
 ng build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Build artifacts are written to the `dist/` directory, optimized for performance.
 
-## Running unit tests
+---
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Testing
+
+Run unit tests with [Vitest](https://vitest.dev/):
 
 ```bash
 ng test
 ```
 
-## Running end-to-end tests
+---
 
-For end-to-end (e2e) testing, run:
+## Project Structure
 
-```bash
-ng e2e
+```
+src/
+└── app/
+    ├── calendar/               # Calendar component & supporting files
+    │   ├── calendar.component.ts
+    │   ├── calendar-event.ts   # CalendarEvent model
+    │   ├── calendar-i18n.ts    # i18n tokens (DE + EN included)
+    │   ├── calendar-layout.ts
+    │   ├── calendar-month-layout.ts
+    │   ├── calendar-week-layout.ts
+    │   ├── calendar-day-layout.ts
+    │   ├── add-edit-event-dialog.component.ts
+    │   ├── color-picker.component.ts
+    │   ├── event-time-range.component.ts
+    │   └── README.md           # Calendar component usage docs
+    └── production-calendar/    # Production usage example
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+---
+
+## Calendar Component
+
+The core of the app is the `<app-calendar>` component. See [src/app/calendar/README.md](src/app/calendar/README.md) for full usage documentation including:
+
+- Inputs & outputs reference
+- Controlled vs. self-managed event mode
+- Month, week, and day view details
+- Custom sidebar templates
+- Internationalization (i18n)
+- Standalone `ColorPickerComponent` usage
+
+Quick example:
+
+```html
+<app-calendar
+  [events]="myEvents"
+  [initialView]="'week'"
+  (eventAdded)="onAdd($event)"
+  (eventUpdated)="onUpdate($event)"
+  (eventDeleted)="onDelete($event)"
+/>
+```
+
+---
 
 ## Additional Resources
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [Angular CLI Reference](https://angular.dev/tools/cli)
+- [Luxon Documentation](https://moment.github.io/luxon/)
