@@ -220,6 +220,11 @@ export class CalendarComponent implements OnInit {
     this.selectEvent(next);
   }
 
+  onScroll(e: Event): void {
+    const el = e.target as HTMLElement;
+    el.style.setProperty('--scroll-top', el.scrollTop + 'px');
+  }
+
   private scrollToBusinessHours() {
     setTimeout(() => {
       const scrollContainer = document.querySelector(

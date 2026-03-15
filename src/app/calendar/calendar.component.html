@@ -43,177 +43,188 @@
       }
     </mat-toolbar>
 
-    <!-- Weekday Header with Time/Week Axis -->
-    <div style="display: flex; gap: 0">
-      @if (view() === 'week' || view() === 'day') {
-        <div
-          class="time-axis-header week-num-btn"
-          (click)="view() === 'week' ? monthLayout() : weekLayout(date())"
-          [title]="
-            view() === 'week'
-              ? date().setLocale(i18n.locale).toFormat('MMMM yyyy')
-              : i18n.weekPrefix + ' ' + date().weekNumber
-          "
-        >
-          @if (view() === 'week') {
-            {{ date().setLocale(i18n.locale).toFormat('MMM') }}
-          } @else {
-            {{ i18n.weekPrefix }}&thinsp;{{ date().weekNumber }}
-          }
-        </div>
-      } @else if (view() === 'month') {
-        <div class="week-axis-header"></div>
-      }
-      @if (view() === 'day') {
-        <div class="weekday-header">
-          <div class="weekday">{{ date().setLocale(i18n.locale).toFormat('cccc d MMMM') }}</div>
-        </div>
-      } @else if (view() === 'week') {
-        <div class="weekday-header">
-          @for (day of weeks()[0]; track day; let i = $index) {
-            <div class="weekday clickable" (click)="dayLayout(day)">
-              {{ day.setLocale(i18n.locale).toFormat('ccc d') }}
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="weekday-header">
-          @for (weekday of weekdays; track weekday) {
-            <div class="weekday">{{ weekday }}</div>
-          }
-        </div>
-      }
-    </div>
-
     <!-- Calendar Grid with Time Axis / Week Axis -->
     <div
       class="scroll-container"
       [class.week-view]="view() === 'week'"
       [class.day-view]="view() === 'day'"
+      (scroll)="onScroll($event)"
     >
-      @if (view() === 'week' || view() === 'day') {
-        <div class="time-axis">
-          @for (hour of hourMarkers(); track hour) {
-            @if (hour < 24) {
-              <div
-                class="time-marker"
-                [class.first-hour]="hour === 0"
-                [style.gridRow]="hour * 4 + 1 + ' / span 4'"
-              >
-                <span class="time-label">{{ hour }}</span>
-              </div>
-            }
-          }
-        </div>
-      } @else if (view() === 'month') {
-        <div class="week-axis">
-          @for (week of weeks(); track weekIndex; let weekIndex = $index) {
-            <div
-              class="week-marker"
-              [style.height.%]="100 / weeks().length"
-              (click)="weekLayout(week[0])"
-            >
-              <span class="week-label">W{{ week[0].weekNumber }}</span>
-            </div>
-          }
-        </div>
-      }
-      <div
-        class="calendar"
-        [class.week-view]="view() === 'week'"
-        [class.day-view]="view() === 'day'"
-        [style.gridTemplateRows]="
-          view() === 'week' || view() === 'day'
-            ? 'repeat(96, 30px)'
-            : 'repeat(' + weeks().length + ', 1fr)'
-        "
-      >
-        @for (week of weeks(); track weekIndex; let weekIndex = $index) {
-          @for (day of week; track dayIndex; let dayIndex = $index) {
-            <div
-              class="day"
-              [class.month-view]="view() === 'month'"
-              [style.gridColumn]="view() === 'month' ? '' : view() === 'day' ? '1' : dayIndex + 1"
-              (mousemove)="(view() === 'week' || view() === 'day') && onDayMouseMove($event, day)"
-              (mouseleave)="onDayMouseLeave()"
-              (click)="readonly() ? null : addEvent(day)"
-            >
-              @if (
-                (view() === 'week' || view() === 'day') &&
-                hoveredTimeSlot()?.day?.hasSame(day, 'day')
-              ) {
-                <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
-              }
-              <span class="day-number">{{ day.day }}</span>
-            </div>
-          }
-        }
-
-        <!-- Horizontal hour lines for week/day view -->
+      <!-- Weekday Header — sticky within the scroll container -->
+      <div class="calendar-subheader">
         @if (view() === 'week' || view() === 'day') {
-          @for (hour of hourMarkers().slice(1); track hour) {
-            <div
-              class="hour-line"
-              [style.gridRow]="hour * 4 + 1 + ' / span 1'"
-              [style.gridColumn]="'1 / -1'"
-            ></div>
-          }
-        }
-
-        <!-- Horizontal 15-minute lines for week/day view -->
-        @if (view() === 'week' || view() === 'day') {
-          @for (row of minuteMarkers(); track row) {
-            <div
-              class="minute-line"
-              [style.gridRow]="row + ' / span 1'"
-              [style.gridColumn]="'1 / -1'"
-            ></div>
-          }
-        }
-
-        @for (event of positionedEvents(); track event.id) {
-          <div
-            class="event"
-            [class.hovered]="
-              (hoveredEventId() ?? selectedEvent()?.id) === (event.metadata.sourceId ?? event.id)
+          <button
+            mat-button
+            class="time-axis-header week-num-btn"
+            (click)="view() === 'week' ? monthLayout() : weekLayout(date())"
+            [title]="
+              view() === 'week'
+                ? date().setLocale(i18n.locale).toFormat('MMMM yyyy')
+                : i18n.weekPrefix + ' ' + date().weekNumber
             "
-            [style.left]="
-              view() === 'week' || view() === 'day'
-                ? 'calc(' + event.layout.left + '% + ' + (event.metadata.paddingLeft ?? 6) + 'px)'
-                : 'calc(' + event.layout.left + '% + 4px)'
-            "
-            [style.width]="
-              view() === 'week' || view() === 'day'
-                ? 'calc(' +
-                  event.layout.width +
-                  '% - ' +
-                  ((event.metadata.paddingLeft ?? 6) + (event.metadata.paddingRight ?? 6)) +
-                  'px)'
-                : 'calc(' + event.layout.width + '% - 8px)'
-            "
-            [style.top]="
-              view() === 'week' || view() === 'day'
-                ? 'calc(' + event.layout.row * (100 / 96) + '% + 2px)'
-                : event.sizing.topPercent + '%'
-            "
-            [style.height]="
-              view() === 'week' || view() === 'day'
-                ? 'calc(' + (event.metadata.rowSpan || 1) * (100 / 96) + '% - 4px)'
-                : event.sizing.heightPercentMonth + '%'
-            "
-            [style.backgroundColor]="event.color"
-            (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
-            (mouseleave)="hoveredEventId.set(null)"
-            (click)="onEventClick(event)"
           >
-            @if (!event.metadata.hiddenCount) {
-              <span>{{ event.title }}</span>
+            @if (view() === 'week') {
+              {{ date().setLocale(i18n.locale).toFormat('MMM') }}
+            } @else {
+              {{ i18n.weekPrefix }}&thinsp;{{ date().weekNumber }}
             }
-            @if (event.metadata.hiddenCount) {
-              <span class="more-events">+{{ event.metadata.hiddenCount }} more</span>
+          </button>
+        } @else if (view() === 'month') {
+          <div class="week-axis-header"></div>
+        }
+        @if (view() === 'day') {
+          <div class="weekday-header">
+            <div class="weekday">{{ date().setLocale(i18n.locale).toFormat('cccc d MMMM') }}</div>
+          </div>
+        } @else if (view() === 'week') {
+          <div class="weekday-header">
+            @for (day of weeks()[0]; track day; let i = $index) {
+              <button mat-button class="weekday" (click)="dayLayout(day)">
+                {{ day.setLocale(i18n.locale).toFormat('ccc d') }}
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="weekday-header">
+            @for (weekday of weekdays; track weekday) {
+              <div class="weekday">{{ weekday }}</div>
             }
           </div>
         }
+      </div>
+
+      <!-- Scrollable content body -->
+      <div
+        class="calendar-body"
+        [class.week-view]="view() === 'week'"
+        [class.day-view]="view() === 'day'"
+      >
+        @if (view() === 'week' || view() === 'day') {
+          <div class="time-axis">
+            @for (hour of hourMarkers(); track hour) {
+              @if (hour < 24) {
+                <div
+                  class="time-marker"
+                  [class.first-hour]="hour === 0"
+                  [style.gridRow]="hour * 4 + 1 + ' / span 4'"
+                >
+                  <span class="time-label">{{ hour }}</span>
+                </div>
+              }
+            }
+          </div>
+        } @else if (view() === 'month') {
+          <div class="week-axis">
+            @for (week of weeks(); track weekIndex; let weekIndex = $index) {
+              <button
+                mat-button
+                class="week-marker"
+                [style.height.%]="100 / weeks().length"
+                (click)="weekLayout(week[0])"
+              >
+                <span class="week-label">W{{ week[0].weekNumber }}</span>
+              </button>
+            }
+          </div>
+        }
+        <div
+          class="calendar"
+          [class.week-view]="view() === 'week'"
+          [class.day-view]="view() === 'day'"
+          [style.gridTemplateRows]="
+            view() === 'week' || view() === 'day'
+              ? 'repeat(96, 30px)'
+              : 'repeat(' + weeks().length + ', 1fr)'
+          "
+        >
+          @for (week of weeks(); track weekIndex; let weekIndex = $index) {
+            @for (day of week; track dayIndex; let dayIndex = $index) {
+              <div
+                class="day"
+                [class.month-view]="view() === 'month'"
+                [style.gridColumn]="view() === 'month' ? '' : view() === 'day' ? '1' : dayIndex + 1"
+                (mousemove)="(view() === 'week' || view() === 'day') && onDayMouseMove($event, day)"
+                (mouseleave)="onDayMouseLeave()"
+                (click)="readonly() ? null : addEvent(day)"
+              >
+                @if (
+                  (view() === 'week' || view() === 'day') &&
+                  hoveredTimeSlot()?.day?.hasSame(day, 'day')
+                ) {
+                  <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
+                }
+                <span class="day-number">{{ day.day }}</span>
+              </div>
+            }
+          }
+
+          <!-- Horizontal hour lines for week/day view -->
+          @if (view() === 'week' || view() === 'day') {
+            @for (hour of hourMarkers().slice(1); track hour) {
+              <div
+                class="hour-line"
+                [style.gridRow]="hour * 4 + 1 + ' / span 1'"
+                [style.gridColumn]="'1 / -1'"
+              ></div>
+            }
+          }
+
+          <!-- Horizontal 15-minute lines for week/day view -->
+          @if (view() === 'week' || view() === 'day') {
+            @for (row of minuteMarkers(); track row) {
+              <div
+                class="minute-line"
+                [style.gridRow]="row + ' / span 1'"
+                [style.gridColumn]="'1 / -1'"
+              ></div>
+            }
+          }
+
+          @for (event of positionedEvents(); track event.id) {
+            <div
+              class="event"
+              [style.--event-top]="event.layout.row * 30 + 'px'"
+              [class.hovered]="
+                (hoveredEventId() ?? selectedEvent()?.id) === (event.metadata.sourceId ?? event.id)
+              "
+              [style.left]="
+                view() === 'week' || view() === 'day'
+                  ? 'calc(' + event.layout.left + '% + ' + (event.metadata.paddingLeft ?? 6) + 'px)'
+                  : 'calc(' + event.layout.left + '% + 4px)'
+              "
+              [style.width]="
+                view() === 'week' || view() === 'day'
+                  ? 'calc(' +
+                    event.layout.width +
+                    '% - ' +
+                    ((event.metadata.paddingLeft ?? 6) + (event.metadata.paddingRight ?? 6)) +
+                    'px)'
+                  : 'calc(' + event.layout.width + '% - 8px)'
+              "
+              [style.top]="
+                view() === 'week' || view() === 'day'
+                  ? 'calc(' + event.layout.row * (100 / 96) + '% + 2px)'
+                  : event.sizing.topPercent + '%'
+              "
+              [style.height]="
+                view() === 'week' || view() === 'day'
+                  ? 'calc(' + (event.metadata.rowSpan || 1) * (100 / 96) + '% - 4px)'
+                  : event.sizing.heightPercentMonth + '%'
+              "
+              [style.backgroundColor]="event.color"
+              (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
+              (mouseleave)="hoveredEventId.set(null)"
+              (click)="onEventClick(event)"
+            >
+              @if (!event.metadata.hiddenCount) {
+                <span class="event-title">{{ event.title }}</span>
+              }
+              @if (event.metadata.hiddenCount) {
+                <span class="more-events">+{{ event.metadata.hiddenCount }} more</span>
+              }
+            </div>
+          }
+        </div>
       </div>
     </div>
 

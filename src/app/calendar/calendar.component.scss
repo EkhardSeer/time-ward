@@ -78,6 +78,9 @@
   gap: 8px;
   width: 100%;
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 30;
 
   .nav-group {
     display: flex;
@@ -117,6 +120,7 @@
 
 .scroll-container {
   display: flex;
+  flex-direction: column;
   gap: 0;
   flex: 1;
   overflow: hidden;
@@ -128,6 +132,27 @@
     overflow-x: hidden;
     scrollbar-gutter: stable;
   }
+}
+
+.calendar-subheader {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #f3f3f3;
+}
+
+.calendar-body {
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+}
+
+.scroll-container:not(.week-view):not(.day-view) > .calendar-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .time-axis-header {
@@ -143,14 +168,11 @@
     font-size: 11px;
     font-weight: bold;
     color: #999;
-    cursor: pointer;
     border-bottom: 1px solid #ddd;
-    user-select: none;
-
-    &:hover {
-      background-color: rgba(128, 128, 128, 0.15);
-      color: #555;
-    }
+    min-width: 0;
+    padding: 0;
+    height: 30px;
+    letter-spacing: normal;
   }
 }
 
@@ -213,11 +235,10 @@
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid #eee;
-  cursor: pointer;
-}
-
-.week-marker:hover {
-  background-color: rgba(128, 128, 128, 0.1);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  letter-spacing: normal;
 }
 
 .week-label {
@@ -337,7 +358,6 @@
 .weekday {
   font-weight: bold;
   text-align: center;
-  padding: 4px;
   color: #666;
   height: 30px;
   display: flex;
@@ -345,17 +365,13 @@
   justify-content: center;
   border-bottom: 1px solid #ddd;
   border-right: 1px solid #ddd;
+  min-width: 0;
+  padding: 0;
+  width: 100%;
+  letter-spacing: normal;
 
   &:last-child {
     border-right: none;
-  }
-
-  &.clickable {
-    cursor: pointer;
-    &:hover {
-      background-color: rgba(128, 128, 128, 0.15);
-      text-decoration: underline;
-    }
   }
 }
 
@@ -389,6 +405,20 @@
 .calendar.week-view .event,
 .calendar.day-view .event {
   position: absolute;
+  overflow: visible;
+}
+
+.calendar.week-view .event-title,
+.calendar.day-view .event-title {
+  position: absolute;
+  top: clamp(0px, calc(var(--scroll-top, 0px) - var(--event-top, 0px)), calc(100% - 1.5em - 4px));
+  left: 0;
+  right: 0;
+  display: block;
+  background-color: inherit;
+  border-radius: 3px;
+  padding: 2px 4px;
+  z-index: 1;
 }
 
 .event.hovered {
