@@ -86,6 +86,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
+
+    button[mat-mini-fab] {
+      --mdc-fab-small-container-color: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+    }
   }
 
   .header-date {
@@ -111,8 +116,8 @@
       background: transparent;
 
       &.mat-button-toggle-checked {
-        background: rgba(255, 255, 255, 0.2);
-        color: #fff;
+        background-color: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
       }
     }
   }
@@ -141,7 +146,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #f3f3f3;
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
 }
 
 .calendar-body {
@@ -159,7 +165,6 @@
   width: 60px;
   border-right: 1px solid #ddd;
   flex-shrink: 0;
-  background-color: #f3f3f3;
 
   &.week-num-btn {
     display: flex;
@@ -167,7 +172,7 @@
     justify-content: center;
     font-size: 11px;
     font-weight: bold;
-    color: #999;
+    color: var(--mat-sys-on-primary-container);
     border-bottom: 1px solid #ddd;
     min-width: 0;
     padding: 0;
@@ -180,7 +185,6 @@
   width: 60px;
   border-right: 1px solid #ddd;
   flex-shrink: 0;
-  background-color: #f3f3f3;
 }
 
 .time-axis {
@@ -190,7 +194,7 @@
   position: sticky;
   left: 0;
   height: 2880px;
-  background-color: #f3f3f3;
+  background-color: var(--mat-sys-primary-container);
   display: grid;
   grid-template-rows: repeat(96, 30px);
   z-index: 1;
@@ -210,7 +214,7 @@
 }
 
 .time-label {
-  font-size: 11px;
+  font-size: inherit;
   color: #666;
   font-weight: 500;
   position: absolute;
@@ -223,7 +227,7 @@
   border-right: 1px solid #ddd;
   flex-shrink: 0;
   position: relative;
-  background-color: #f3f3f3;
+  background-color: var(--mat-sys-primary-container);
   display: flex;
   flex-direction: column;
   align-self: stretch;
@@ -242,9 +246,9 @@
 }
 
 .week-label {
-  font-size: 11px;
-  color: #666;
-  font-weight: 500;
+  font-size: inherit;
+  color: var(--mat-sys-on-primary-container);
+  font-weight: bold;
 }
 
 .calendar {
@@ -352,13 +356,16 @@
   grid-template-columns: repeat(7, 1fr);
   flex: 1;
   min-width: 0;
-  background-color: #f3f3f3;
 }
 
 .weekday {
   font-weight: bold;
   text-align: center;
   color: #666;
+
+  &:is(button) {
+    color: var(--mat-sys-on-primary-container);
+  }
   height: 30px;
   display: flex;
   align-items: center;

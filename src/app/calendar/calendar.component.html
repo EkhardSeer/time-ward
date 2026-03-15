@@ -35,7 +35,11 @@
       </div>
       <span style="flex: 1"></span>
       @if (showViewToggle()) {
-        <mat-button-toggle-group [value]="view()" (change)="setView($event.value)">
+        <mat-button-toggle-group
+          [value]="view()"
+          (change)="setView($event.value)"
+          hideSingleSelectionIndicator
+        >
           <mat-button-toggle value="month">{{ i18n.viewMonth }}</mat-button-toggle>
           <mat-button-toggle value="week">{{ i18n.viewWeek }}</mat-button-toggle>
           <mat-button-toggle value="day">{{ i18n.viewDay }}</mat-button-toggle>
@@ -108,7 +112,7 @@
                   [class.first-hour]="hour === 0"
                   [style.gridRow]="hour * 4 + 1 + ' / span 4'"
                 >
-                  <span class="time-label">{{ hour }}</span>
+                  <span class="time-label">{{ hour === 0 ? '' : hour }}</span>
                 </div>
               }
             }
