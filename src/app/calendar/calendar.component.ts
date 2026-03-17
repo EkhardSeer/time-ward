@@ -34,7 +34,12 @@ import {
 } from './components/add-edit-event-dialog/add-edit-event-dialog.component';
 import { ColorPickerComponent } from './components/color-picker/color-picker.component';
 import { EventTimeRangeComponent } from './components/event-time-range/event-time-range.component';
+import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { CalendarAction } from './models/calendar-action';
 import { EVENT_MOCK } from './testing/event-mock';
+
 import {
   EVENT_EDGE_PADDING_LEFT,
   EVENT_EDGE_PADDING_RIGHT,
@@ -55,8 +60,11 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
   imports: [
     MatButtonModule,
     MatButtonToggleModule,
+    MatSelectModule,
     MatIconModule,
     MatDialogModule,
+    MatMenuModule,
+    MatDividerModule,
     MatToolbarModule,
     MatFormFieldModule,
     MatInputModule,
@@ -94,6 +102,11 @@ export class CalendarComponent implements OnInit {
   initialView = input<'month' | 'week' | 'day'>('month');
   /** Initial date on mount. Default: today. */
   initialDate = input<DateTime>(DateTime.now());
+  /**
+   * Actions shown in the calendar-wide `⋮` menu in the toolbar.
+   * No button is rendered when the array is empty.
+   */
+  actions = input<CalendarAction[]>([]);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   /** Emitted when the user saves a new event. */
@@ -104,6 +117,8 @@ export class CalendarComponent implements OnInit {
   eventDeleted = output<string>();
   /** Emitted when an event is selected via click (only when detailsTemplate is set). */
   eventSelected = output<CalendarEvent>();
+  /** Emitted when the user clicks an action in the calendar toolbar menu. */
+  actionTriggered = output<CalendarAction>();
 
   /** The event currently shown in the details panel. */
   selectedEvent = signal<CalendarEvent | null>(null);
@@ -577,6 +592,12 @@ export class CalendarComponent implements OnInit {
 
   onDayMouseLeave() {
     this.hoveredTimeSlot.set(null);
+  }
+
+  /** Fires `actionTriggered` for the given calendar-wide action. */
+  onCalendarAction(action: CalendarAction, domEvent: MouseEvent): void {
+    domEvent.stopPropagation();
+    this.actionTriggered.emit(action);
   }
 
   rowToDateTime(day: DateTime, row: number): DateTime {

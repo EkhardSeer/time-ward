@@ -3,6 +3,13 @@
   <div class="calendar-content">
     <!-- Toolbar -->
     <mat-toolbar color="primary" class="calendar-header">
+      @if (showViewToggle()) {
+        <mat-select class="view-select" [value]="view()" (valueChange)="setView($event)">
+          <mat-option value="month">{{ i18n.viewMonth }}</mat-option>
+          <mat-option value="week">{{ i18n.viewWeek }}</mat-option>
+          <mat-option value="day">{{ i18n.viewDay }}</mat-option>
+        </mat-select>
+      }
       <div class="nav-group">
         <button mat-mini-fab (click)="previous()">
           <mat-icon>chevron_left</mat-icon>
@@ -41,16 +48,28 @@
           }
         </div>
       }
-      @if (showViewToggle()) {
-        <mat-button-toggle-group
-          [value]="view()"
-          (change)="setView($event.value)"
-          hideSingleSelectionIndicator
+      @if (actions().length > 0) {
+        <button
+          mat-icon-button
+          class="toolbar-actions-btn"
+          [matMenuTriggerFor]="calendarActionsMenu"
+          title="Actions"
         >
-          <mat-button-toggle value="month">{{ i18n.viewMonth }}</mat-button-toggle>
-          <mat-button-toggle value="week">{{ i18n.viewWeek }}</mat-button-toggle>
-          <mat-button-toggle value="day">{{ i18n.viewDay }}</mat-button-toggle>
-        </mat-button-toggle-group>
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #calendarActionsMenu="matMenu">
+          @for (action of actions(); track action.id) {
+            @if (action.divider) {
+              <mat-divider />
+            }
+            <button mat-menu-item (click)="onCalendarAction(action, $event)">
+              @if (action.icon) {
+                <mat-icon>{{ action.icon }}</mat-icon>
+              }
+              <span>{{ action.label }}</span>
+            </button>
+          }
+        </mat-menu>
       }
     </mat-toolbar>
 

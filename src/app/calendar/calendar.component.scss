@@ -176,19 +176,17 @@
     }
   }
 
-  .mat-button-toggle-group {
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 4px;
+  .toolbar-actions-btn {
+    color: white;
+  }
 
-    .mat-button-toggle {
-      color: rgba(255, 255, 255, 0.75);
-      background: transparent;
-
-      &.mat-button-toggle-checked {
-        background-color: var(--mat-sys-primary-container);
-        color: var(--mat-sys-on-primary-container);
-      }
-    }
+  .view-select {
+    width: 120px;
+    color: white;
+    --mat-select-trigger-text-size: 0.9rem;
+    --mat-select-enabled-trigger-text-color: white;
+    --mat-select-enabled-arrow-color: rgba(255, 255, 255, 0.7);
+    --mat-select-focused-arrow-color: white;
   }
 }
 
@@ -489,6 +487,46 @@
   filter: brightness(1.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10;
+}
+
+.event-actions-btn {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 20px;
+  height: 20px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
+  color: white;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+  }
+}
+
+.event.hovered .event-actions-btn {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+.event-actions-btn:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .more-events {

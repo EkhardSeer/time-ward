@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, signal, TemplateRef, ViewChild } from '@angular/core';
 import { DateTime } from 'luxon';
 import { CalendarComponent } from '../../calendar.component';
+import { CalendarAction } from '../../models/calendar-action';
 import { CalendarEvent } from '../../models/calendar-event';
 import { CalendarSource } from '../../models/calendar-source';
 import { buildCalendarEvents } from '../../utils/build-calendar-events';
@@ -223,6 +224,148 @@ function buildOrders(tpl: TemplateRef<{ $implicit: CalendarEvent }>): CalendarEv
   );
 }
 
+// ── Random order generator (today ±14 days) ───────────────────────────────────
+
+const ARTICLES: {
+  article: string;
+  articleNo: string;
+  unit: string;
+  machine: string;
+  components: { name: string; qty: number; unit: string }[];
+}[] = [
+  {
+    article: 'Gearbox Housing',
+    articleNo: 'GB-1140',
+    unit: 'pcs',
+    machine: 'CNC-3',
+    components: [
+      { name: 'Aluminium block', qty: 1, unit: 'pcs' },
+      { name: 'Bearing 6204', qty: 2, unit: 'pcs' },
+    ],
+  },
+  {
+    article: 'Drive Shaft',
+    articleNo: 'DS-0880',
+    unit: 'pcs',
+    machine: 'LATHE-1',
+    components: [
+      { name: 'Steel bar Ø40', qty: 1, unit: 'pcs' },
+      { name: 'Key 8×7×50', qty: 1, unit: 'pcs' },
+    ],
+  },
+  {
+    article: 'Cover Plate',
+    articleNo: 'CP-0221',
+    unit: 'pcs',
+    machine: 'PRESS-2',
+    components: [
+      { name: 'Sheet metal 2 mm', qty: 1, unit: 'sheets' },
+      { name: 'Seal ring M60', qty: 1, unit: 'pcs' },
+    ],
+  },
+  {
+    article: 'Motor Bracket',
+    articleNo: 'MB-0934',
+    unit: 'pcs',
+    machine: 'CNC-3',
+    components: [
+      { name: 'Aluminium profile 60×40', qty: 1, unit: 'pcs' },
+      { name: 'M8×20 bolt', qty: 4, unit: 'pcs' },
+    ],
+  },
+  {
+    article: 'Pump Housing',
+    articleNo: 'PH-0567',
+    unit: 'pcs',
+    machine: 'CNC-1',
+    components: [
+      { name: 'Cast iron blank', qty: 1, unit: 'pcs' },
+      { name: 'O-ring kit 50 mm', qty: 1, unit: 'sets' },
+    ],
+  },
+  {
+    article: 'Valve Body',
+    articleNo: 'VB-0312',
+    unit: 'pcs',
+    machine: 'CNC-2',
+    components: [
+      { name: 'Stainless block', qty: 1, unit: 'pcs' },
+      { name: 'Seal set', qty: 1, unit: 'sets' },
+    ],
+  },
+  {
+    article: 'Flange Adapter',
+    articleNo: 'FA-0881',
+    unit: 'pcs',
+    machine: 'LATHE-2',
+    components: [
+      { name: 'Steel disc Ø80', qty: 1, unit: 'pcs' },
+      { name: 'M12 stud', qty: 8, unit: 'pcs' },
+    ],
+  },
+  {
+    article: 'Bearing Seat',
+    articleNo: 'BS-0450',
+    unit: 'pcs',
+    machine: 'GRIND-1',
+    components: [
+      { name: 'Steel tube', qty: 1, unit: 'pcs' },
+      { name: 'Retaining ring', qty: 2, unit: 'pcs' },
+    ],
+  },
+];
+
+function rand(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateRandomOrders(
+  tpl: TemplateRef<{ $implicit: CalendarEvent }>,
+  count = 8,
+): CalendarEvent[] {
+  const today = DateTime.now().startOf('day');
+  const orders: ProductionOrder[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const dayOffset = rand(-14, 14);
+    const day = today.plus({ days: dayOffset });
+    const startH = rand(6, 20);
+    const hours = rand(2, 6);
+    const article = ARTICLES[rand(0, ARTICLES.length - 1)];
+    const quantity = rand(5, 100);
+    const status: ProductionOrder['status'] =
+      dayOffset < 0 ? 'done' : dayOffset === 0 ? 'running' : 'planned';
+    const orderId = `PA-${today.year}-${String(1000 + i + rand(0, 50)).padStart(4, '0')}`;
+
+    const start = day.set({ hour: startH, minute: 0, second: 0 });
+    const end = start.plus({ hours });
+
+    orders.push({
+      orderId,
+      article: article.article,
+      articleNo: article.articleNo,
+      quantity,
+      unit: article.unit,
+      machine: article.machine,
+      status,
+      components: article.components.map((c) => ({ ...c, qty: c.qty * quantity })),
+      title: `${orderId} · ${article.article}`,
+      start,
+      end,
+    });
+  }
+
+  return buildCalendarEvents(orders, 'orderId', 'title', 'start', 'end', {
+    color: (o) =>
+      o.status === 'done'
+        ? COLORS.orderDone
+        : o.status === 'running'
+          ? COLORS.orderRunning
+          : COLORS.orderPlanned,
+    sidebarTemplate: tpl,
+  });
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 @Component({
@@ -235,6 +378,8 @@ function buildOrders(tpl: TemplateRef<{ $implicit: CalendarEvent }>): CalendarEv
       [calendars]="calendars()"
       [readonly]="true"
       initialView="week"
+      [actions]="orderActions"
+      (actionTriggered)="onAction($event)"
     />
 
     <!-- ── Order details template ──────────────────────────────────────────── -->
@@ -407,6 +552,10 @@ export class ProductionCalendarComponent implements AfterViewInit {
 
   calendars = signal<CalendarSource[]>([]);
 
+  readonly orderActions: CalendarAction[] = [
+    { id: 'shuffle', label: 'Shuffle Orders', icon: 'shuffle' },
+  ];
+
   ngAfterViewInit() {
     const from = DateTime.now().startOf('week');
     const to = from.plus({ weeks: 3 });
@@ -424,6 +573,16 @@ export class ProductionCalendarComponent implements AfterViewInit {
         events: generateShifts(from, to, this.shiftTpl),
       },
     ]);
+  }
+
+  onAction(action: CalendarAction) {
+    if (action.id === 'shuffle') {
+      this.calendars.update((sources) =>
+        sources.map((s) =>
+          s.id === 'orders' ? { ...s, events: generateRandomOrders(this.orderTpl) } : s,
+        ),
+      );
+    }
   }
 
   orderOf(event: CalendarEvent): ProductionOrder {

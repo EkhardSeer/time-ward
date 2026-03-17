@@ -3,6 +3,7 @@
  */
 export { CalendarComponent } from './calendar.component';
 export type { CalendarEvent } from './models/calendar-event';
+export type { CalendarAction } from './models/calendar-action';
 export type { CalendarSource } from './models/calendar-source';
 export type { PositionedEvent } from './models/positioned-event';
 export type { CalendarI18n } from './models/calendar-i18n';

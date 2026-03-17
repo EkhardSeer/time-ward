@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import { TemplateRef } from '@angular/core';
+import { CalendarAction } from './calendar-action';
 
 /**
  * Represents a single event displayed on the calendar.
@@ -47,4 +48,10 @@ export interface CalendarEvent {
    * domain type inside a `sidebarTemplate` or event-output handler.
    */
   data?: unknown;
+  /**
+   * Per-event context-menu actions.
+   * When set, replaces the global `[actions]` input for this event.
+   * Pass an empty array `[]` to suppress the menu entirely for this event.
+   */
+  actions?: CalendarAction[];
 }
