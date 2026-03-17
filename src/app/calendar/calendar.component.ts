@@ -11,11 +11,12 @@ import {
 } from '@angular/core';
 import { NgStyle, NgTemplateOutlet } from '@angular/common';
 import { DateTime } from 'luxon';
-import { CalendarWeekLayout } from './calendar-week-layout';
-import { CalendarMonthLayout } from './calendar-month-layout';
-import { CalendarDayLayout } from './calendar-day-layout';
-import { CalendarEvent, PositionedEvent } from './calendar-event';
-import { CALENDAR_I18N } from './calendar-i18n';
+import { CalendarWeekLayout } from './layout/week/calendar-week-layout';
+import { CalendarMonthLayout } from './layout/month/calendar-month-layout';
+import { CalendarDayLayout } from './layout/day/calendar-day-layout';
+import { CalendarEvent } from './models/calendar-event';
+import { PositionedEvent } from './models/positioned-event';
+import { CALENDAR_I18N } from './models/calendar-i18n';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,10 +29,10 @@ import {
   AddEditEventDialogComponent,
   EventData,
   EventDialogData,
-} from './add-edit-event-dialog.component';
-import { ColorPickerComponent } from './color-picker.component';
-import { EventTimeRangeComponent } from './event-time-range.component';
-import { EVENT_MOCK } from './event-mock';
+} from './components/add-edit-event-dialog/add-edit-event-dialog.component';
+import { ColorPickerComponent } from './components/color-picker/color-picker.component';
+import { EventTimeRangeComponent } from './components/event-time-range/event-time-range.component';
+import { EVENT_MOCK } from './testing/event-mock';
 
 const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
 

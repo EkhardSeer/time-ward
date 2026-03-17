@@ -5,7 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatTimepicker, MatTimepickerModule } from '@angular/material/timepicker';
 import { MatIconModule } from '@angular/material/icon';
-import { CALENDAR_I18N } from './calendar-i18n';
+import { CALENDAR_I18N } from '../../models/calendar-i18n';
 import { DateTime } from 'luxon';
 import { MatButtonModule } from '@angular/material/button';
 

@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, signal, TemplateRef, ViewChild } from '@angular/core';
 import { DateTime } from 'luxon';
-import { CalendarComponent } from '../calendar/calendar.component';
-import { CalendarEvent } from '../calendar/calendar-event';
+import { CalendarComponent } from '../../calendar.component';
+import { CalendarEvent } from '../../models/calendar-event';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';

@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent } from './calendar-event';
+import { CalendarEvent } from '../../models/calendar-event';
 import { CalendarDayLayout } from './calendar-day-layout';
 
 describe('CalendarDayLayout', () => {
@@ -12,6 +12,7 @@ describe('CalendarDayLayout', () => {
     return { id: 'e1', title: 'Test', color: '#f00', ...overrides };
   }
 
+  // test
   beforeEach(() => {
     layout = new CalendarDayLayout();
   });

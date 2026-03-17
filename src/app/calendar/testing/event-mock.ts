@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent } from './calendar-event';
+import { CalendarEvent } from '../models/calendar-event';
 
 export const EVENT_MOCK: CalendarEvent[] = [
   // === Today (for reference) ===

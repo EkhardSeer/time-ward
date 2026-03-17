@@ -5,9 +5,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { CALENDAR_I18N } from './calendar-i18n';
-import { ColorPickerComponent } from './color-picker.component';
-import { EventTimeRangeComponent } from './event-time-range.component';
+import { CALENDAR_I18N } from '../../models/calendar-i18n';
+import { ColorPickerComponent } from '../color-picker/color-picker.component';
+import { EventTimeRangeComponent } from '../event-time-range/event-time-range.component';
 
 export interface EventDialogData {
   mode: 'add' | 'edit';

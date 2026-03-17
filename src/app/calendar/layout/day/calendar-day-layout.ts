@@ -1,12 +1,11 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent, PositionedEvent } from './calendar-event';
-import { CalendarLayoutBase } from './calendar-layout-base';
-
-interface DaySlice {
-  event: CalendarEvent;
-  startRow: number;
-  rowSpan: number;
-}
+import { CalendarEvent } from '../../models/calendar-event';
+import { PositionedEvent } from '../../models/positioned-event';
+import { CalendarLayoutBase } from '../base/calendar-layout-base';
+import { DaySlice } from './types/day-slice';
+import { timeToRow, durationToRowSpan } from '../utils/time-utils';
+import { assignColumns } from '../utils/assign-columns';
+import { MAX_ROWS } from '../constants';
 
 /**
  * Layout engine for the single-day calendar view.
@@ -37,8 +36,8 @@ export class CalendarDayLayout extends CalendarLayoutBase {
       const clippedEnd = event.end > dayEnd ? dayEnd : event.end;
       slices.push({
         event,
-        startRow: this.timeToRow(clippedStart),
-        rowSpan: this.durationToRowSpan(clippedStart, clippedEnd),
+        startRow: timeToRow(clippedStart),
+        rowSpan: durationToRowSpan(clippedStart, clippedEnd),
       });
     }
     return slices;
@@ -46,7 +45,7 @@ export class CalendarDayLayout extends CalendarLayoutBase {
 
   /** Assign sub-columns and build positioned events. */
   private positionSlices(slices: DaySlice[]): PositionedEvent[] {
-    const columns = this.assignColumns(slices);
+    const columns = assignColumns(slices);
     return slices.map((slice, i) => {
       const { event, startRow, rowSpan } = slice;
       const { colIndex, totalColumns } = columns[i];
@@ -61,8 +60,8 @@ export class CalendarDayLayout extends CalendarLayoutBase {
           1,
         ),
         sizing: this.buildSizing({
-          heightPercent: rowSpan * (100 / this.MAX_ROWS),
-          topPercent: startRow * (100 / this.MAX_ROWS),
+          heightPercent: rowSpan * (100 / MAX_ROWS),
+          topPercent: startRow * (100 / MAX_ROWS),
         }),
         metadata: this.buildViewMetadata(
           0,

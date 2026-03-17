@@ -1,16 +1,12 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent, PositionedEvent } from './calendar-event';
-import { CalendarLayoutBase, ColumnAssignment } from './calendar-layout-base';
-
-interface WeekSlice {
-  event: CalendarEvent;
-  sliceId: string;
-  startRow: number;
-  rowSpan: number;
-  dayNum: number;
-}
-
-const DAYS_IN_WEEK = 7;
+import { CalendarEvent } from '../../models/calendar-event';
+import { PositionedEvent } from '../../models/positioned-event';
+import { CalendarLayoutBase } from '../base/calendar-layout-base';
+import { ColumnAssignment } from '../base/types/column-assignment';
+import { WeekSlice } from './types/week-slice';
+import { timeToRow, durationToRowSpan } from '../utils/time-utils';
+import { assignColumns } from '../utils/assign-columns';
+import { DAYS_IN_WEEK, MAX_ROWS } from '../constants';
 
 /**
  * Layout engine for the 7-day week calendar view.
@@ -50,8 +46,8 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
         slicesPerDay[dayNum].push({
           event,
           sliceId: dayIndex === endDayIndex ? event.id : `${event.id}-day${dayNum}`,
-          startRow: this.timeToRow(clippedStart),
-          rowSpan: this.durationToRowSpan(clippedStart, clippedEnd),
+          startRow: timeToRow(clippedStart),
+          rowSpan: durationToRowSpan(clippedStart, clippedEnd),
           dayNum,
         });
       }
@@ -69,7 +65,7 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
       slices.sort((a, b) =>
         a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
       );
-      const columns = this.assignColumns(slices);
+      const columns = assignColumns(slices);
       for (let si = 0; si < slices.length; si++) {
         positioned.push(this.buildEvent(slices[si], columns[si], dayWidth));
       }
@@ -93,8 +89,8 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
         1,
       ),
       sizing: this.buildSizing({
-        heightPercent: rowSpan * (100 / this.MAX_ROWS),
-        topPercent: startRow * (100 / this.MAX_ROWS),
+        heightPercent: rowSpan * (100 / MAX_ROWS),
+        topPercent: startRow * (100 / MAX_ROWS),
       }),
       metadata: {
         ...this.buildViewMetadata(

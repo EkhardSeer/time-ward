@@ -1,38 +1,12 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent, PositionedEvent } from './calendar-event';
-import { CalendarLayoutBase } from './calendar-layout-base';
-
-/** Tracks occupied time intervals per row for collision detection. */
-interface RowState {
-  intervals: Array<{ start: DateTime; end: DateTime }>;
-}
-
-interface MonthLayoutContext {
-  weeks: DateTime[][];
-  weekHeightPercent: number;
-  dayHeaderHeightPercent: number;
-  eventRowHeightPercent: number;
-  dayWidth: number;
-  /** rowsPerDay[weekIdx][dayIdx][row] — time intervals already placed in that row. */
-  rowsPerDay: RowState[][][];
-  hiddenEventsMap: Map<string, { count: number; weekIndex: number; dayKey: number }>;
-  positioned: PositionedEvent[];
-}
-
-interface EventGridRange {
-  startWeekIndex: number;
-  startDayIndex: number;
-  endWeekIndex: number;
-  endDayIndex: number;
-  eventStartsBeforeVisible: boolean;
-  eventEndsAfterVisible: boolean;
-}
-
-interface WeekSegment {
-  weekIndex: number;
-  firstDayIndex: number;
-  lastDayIndex: number;
-}
+import { CalendarEvent } from '../../models/calendar-event';
+import { PositionedEvent } from '../../models/positioned-event';
+import { CalendarLayoutBase } from '../base/calendar-layout-base';
+import { hourFraction } from '../utils/time-utils';
+import { RowState } from './types/row-state';
+import { MonthLayoutContext } from './types/month-layout-context';
+import { EventGridRange } from './types/event-grid-range';
+import { WeekSegment } from './types/week-segment';
 
 /**
  * Layout engine for the month calendar view.
@@ -384,7 +358,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     startDayIndex: number,
     dayWidth: number,
   ): { leftPercent: number; widthPercent: number } {
-    const rawLeft = startDayIndex * dayWidth + this.hourFraction(event.start) * dayWidth;
+    const rawLeft = startDayIndex * dayWidth + hourFraction(event.start) * dayWidth;
     const durationHours = event.end.diff(event.start, 'minutes').minutes / 60;
     const rawWidth = (durationHours / 24) * dayWidth;
     const minWidth = dayWidth * this.MIN_SINGLE_DAY_WIDTH_FRACTION;
@@ -407,12 +381,12 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     if (range.eventStartsBeforeVisible) {
       const leftPercent = 0;
       if (seg.weekIndex === range.endWeekIndex && !range.eventEndsAfterVisible) {
-        const endPercent = seg.lastDayIndex * dayWidth + this.hourFraction(event.end) * dayWidth;
+        const endPercent = seg.lastDayIndex * dayWidth + hourFraction(event.end) * dayWidth;
         return { leftPercent, widthPercent: endPercent };
       }
       return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth };
     }
-    const leftPercent = seg.firstDayIndex * dayWidth + this.hourFraction(event.start) * dayWidth;
+    const leftPercent = seg.firstDayIndex * dayWidth + hourFraction(event.start) * dayWidth;
     return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth - leftPercent };
   }
 
@@ -426,12 +400,8 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     if (range.eventEndsAfterVisible) {
       return { leftPercent, widthPercent: 100 - leftPercent };
     }
-    const endPercent = seg.lastDayIndex * dayWidth + this.hourFraction(event.end) * dayWidth;
+    const endPercent = seg.lastDayIndex * dayWidth + hourFraction(event.end) * dayWidth;
     return { leftPercent, widthPercent: endPercent - leftPercent };
-  }
-
-  private hourFraction(dt: DateTime): number {
-    return (dt.hour + dt.minute / 60) / 24;
   }
 
   private emitOverflowBadges(ctx: MonthLayoutContext): void {

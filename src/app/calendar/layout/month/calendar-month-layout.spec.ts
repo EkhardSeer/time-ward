@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { CalendarEvent } from './calendar-event';
+import { CalendarEvent } from '../../models/calendar-event';
 import { CalendarMonthLayout } from './calendar-month-layout';
 
 describe('CalendarMonthLayout', () => {
