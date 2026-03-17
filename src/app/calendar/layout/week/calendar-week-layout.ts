@@ -77,10 +77,10 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
       const slices = slicesPerDay[dayNum];
       if (!slices.length) continue;
       slices.sort((a, b) =>
-        a.sourceOrder !== b.sourceOrder
-          ? a.sourceOrder - b.sourceOrder
-          : a.startRow !== b.startRow
-            ? a.startRow - b.startRow
+        a.startRow !== b.startRow
+          ? a.startRow - b.startRow
+          : a.sourceOrder !== b.sourceOrder
+            ? a.sourceOrder - b.sourceOrder
             : b.rowSpan - a.rowSpan,
       );
       const columns = assignColumns(slices);

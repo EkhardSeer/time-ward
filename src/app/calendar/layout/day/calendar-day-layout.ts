@@ -25,10 +25,10 @@ export class CalendarDayLayout extends CalendarLayoutBase {
   layoutDay(events: CalendarEvent[], day: DateTime): PositionedEvent[] {
     const slices = this.collectSlices(events, day);
     slices.sort((a, b) =>
-      a.sourceOrder !== b.sourceOrder
-        ? a.sourceOrder - b.sourceOrder
-        : a.startRow !== b.startRow
-          ? a.startRow - b.startRow
+      a.startRow !== b.startRow
+        ? a.startRow - b.startRow
+        : a.sourceOrder !== b.sourceOrder
+          ? a.sourceOrder - b.sourceOrder
           : b.rowSpan - a.rowSpan,
     );
     return this.positionSlices(slices);
@@ -61,11 +61,27 @@ export class CalendarDayLayout extends CalendarLayoutBase {
 
     return visible.map(({ slice, colIndex, totalColumns }) => {
       const { event, startRow, rowSpan } = slice;
+
+      // Expand this event rightward until the nearest directly-overlapping
+      // neighbour in a higher column. This gives isolated events their full
+      // width and avoids wasted space when later events in the same transitive
+      // cluster don't actually overlap this one.
+      let rightCol = totalColumns;
+      for (const other of visible) {
+        if (other.colIndex > colIndex && other.colIndex < rightCol) {
+          const overlaps =
+            slice.startRow < other.slice.startRow + other.slice.rowSpan &&
+            other.slice.startRow < startRow + rowSpan;
+          if (overlaps) rightCol = other.colIndex;
+        }
+      }
+      const effectiveWidth = (rightCol - colIndex) / totalColumns;
+
       return {
         ...event,
         layout: this.buildPositionLayout(
           colIndex * (100 / totalColumns),
-          100 / totalColumns,
+          effectiveWidth * 100,
           startRow,
           0,
           1,
@@ -82,7 +98,7 @@ export class CalendarDayLayout extends CalendarLayoutBase {
           event.end,
           rowSpan,
           colIndex === 0 ? EVENT_EDGE_PADDING_LEFT : EVENT_INNER_PADDING,
-          colIndex === totalColumns - 1 ? EVENT_EDGE_PADDING_RIGHT : EVENT_INNER_PADDING,
+          rightCol === totalColumns ? EVENT_EDGE_PADDING_RIGHT : EVENT_INNER_PADDING,
         ),
       };
     });

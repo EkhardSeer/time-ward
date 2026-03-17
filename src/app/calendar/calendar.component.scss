@@ -126,6 +126,13 @@
   width: 100%;
 }
 
+.readonly-event-title {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 4px 0 12px;
+  color: var(--mat-sys-on-surface);
+}
+
 .edit-panel-actions {
   display: flex;
   align-items: center;

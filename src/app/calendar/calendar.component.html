@@ -273,6 +273,16 @@
           [ngTemplateOutlet]="detailsTemplate()!"
           [ngTemplateOutletContext]="{ $implicit: selectedEvent() }"
         />
+      } @else if (readonly()) {
+        <!-- Read-only view: title + time range, no editing controls -->
+        <div class="edit-panel-body">
+          <div class="readonly-event-title">{{ editDraft()?.title }}</div>
+          <app-event-time-range
+            [start]="editDraft()?.start ?? ''"
+            [end]="editDraft()?.end ?? ''"
+            (validChange)="editTimeRangeValid.set($event)"
+          />
+        </div>
       } @else {
         <!-- Built-in inline edit form -->
         <div class="edit-panel-header">

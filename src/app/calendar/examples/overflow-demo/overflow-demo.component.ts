@@ -81,7 +81,6 @@ function generateMonthEvents(): CalendarEvent[] {
       [events]="events"
       [readonly]="true"
       initialView="month"
-      [showSidebar]="false"
     />
   `,
   styles: `

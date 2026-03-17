@@ -161,8 +161,8 @@ export class CalendarComponent implements OnInit {
     this.selectedEvent.set(realEvent);
     this.eventSelected.emit(realEvent);
 
-    // Build edit draft for built-in panel (skipped when in readonly mode)
-    if (!this.readonly() && !this.detailsTemplate()) {
+    // Build edit draft for built-in panel
+    if (!this.detailsTemplate()) {
       this._editingSourceId = sourceId;
       this.editDraft.set(
         this.toEventData(realEvent.title, realEvent.start, realEvent.end, realEvent.color),
