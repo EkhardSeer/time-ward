@@ -9,6 +9,11 @@ import { ColumnAssignment } from '../base/types/column-assignment';
  * sub-column and determines the total number of columns in its overlap
  * cluster.
  *
+ * `totalColumns` is computed at the **transitive cluster level**: if A overlaps
+ * B and B overlaps C, all three share a cluster and receive the same
+ * `totalColumns` even if A and C don't directly overlap. This prevents
+ * inconsistent widths where some events appear wider than their neighbours.
+ *
  * @returns An array of `ColumnAssignment` objects in the same order as the
  *          input slices.
  */
@@ -25,18 +30,44 @@ export function assignColumns(slices: TimeSlice[]): ColumnAssignment[] {
     colIndices[si] = col;
   }
 
-  // Pass 2: determine the widest overlap cluster each slice belongs to
-  const assignments: ColumnAssignment[] = new Array(slices.length);
+  // Pass 2: union-find — merge slices that directly overlap into one cluster
+  const parent = Array.from({ length: slices.length }, (_, i) => i);
+
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]]; // path halving
+      x = parent[x];
+    }
+    return x;
+  }
+
   for (let si = 0; si < slices.length; si++) {
-    const { startRow: sStart, rowSpan: sSpan } = slices[si];
-    let maxColIndex = colIndices[si];
-    for (let sj = 0; sj < slices.length; sj++) {
-      const { startRow: oStart, rowSpan: oSpan } = slices[sj];
-      if (oStart < sStart + sSpan && oStart + oSpan > sStart) {
-        if (colIndices[sj] > maxColIndex) maxColIndex = colIndices[sj];
+    for (let sj = si + 1; sj < slices.length; sj++) {
+      const { startRow: aStart, rowSpan: aSpan } = slices[si];
+      const { startRow: bStart, rowSpan: bSpan } = slices[sj];
+      if (aStart < bStart + bSpan && bStart < aStart + aSpan) {
+        // Merge the two clusters
+        const ra = find(si);
+        const rb = find(sj);
+        if (ra !== rb) parent[ra] = rb;
       }
     }
-    assignments[si] = { colIndex: colIndices[si], totalColumns: maxColIndex + 1 };
+  }
+
+  // Pass 3: find the highest column index within each transitive cluster
+  const clusterMax = new Map<number, number>();
+  for (let si = 0; si < slices.length; si++) {
+    const root = find(si);
+    clusterMax.set(root, Math.max(clusterMax.get(root) ?? 0, colIndices[si]));
+  }
+
+  // Pass 4: every slice in the same cluster gets the same totalColumns
+  const assignments: ColumnAssignment[] = new Array(slices.length);
+  for (let si = 0; si < slices.length; si++) {
+    assignments[si] = {
+      colIndex: colIndices[si],
+      totalColumns: (clusterMax.get(find(si)) ?? 0) + 1,
+    };
   }
 
   return assignments;
