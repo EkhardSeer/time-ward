@@ -5,7 +5,12 @@ import { CalendarLayoutBase } from '../base/calendar-layout-base';
 import { DaySlice } from './types/day-slice';
 import { timeToRow, durationToRowSpan } from '../utils/time-utils';
 import { assignColumns } from '../utils/assign-columns';
-import { MAX_ROWS } from '../constants';
+import {
+  MAX_ROWS,
+  EVENT_EDGE_PADDING_LEFT,
+  EVENT_EDGE_PADDING_RIGHT,
+  EVENT_INNER_PADDING,
+} from '../constants';
 
 /**
  * Layout engine for the single-day calendar view.
@@ -43,12 +48,13 @@ export class CalendarDayLayout extends CalendarLayoutBase {
     return slices;
   }
 
-  /** Assign sub-columns and build positioned events. */
+  /** Assign sub-columns and build positioned events. Day view shows all events — no overflow cap. */
   private positionSlices(slices: DaySlice[]): PositionedEvent[] {
     const columns = assignColumns(slices);
-    return slices.map((slice, i) => {
+    const { visible } = this.capAndSplit(slices, columns, Infinity);
+
+    return visible.map(({ slice, colIndex, totalColumns }) => {
       const { event, startRow, rowSpan } = slice;
-      const { colIndex, totalColumns } = columns[i];
       return {
         ...event,
         layout: this.buildPositionLayout(
@@ -69,8 +75,8 @@ export class CalendarDayLayout extends CalendarLayoutBase {
           event.start,
           event.end,
           rowSpan,
-          colIndex === 0 ? 6 : 1,
-          colIndex === totalColumns - 1 ? 6 : 1,
+          colIndex === 0 ? EVENT_EDGE_PADDING_LEFT : EVENT_INNER_PADDING,
+          colIndex === totalColumns - 1 ? EVENT_EDGE_PADDING_RIGHT : EVENT_INNER_PADDING,
         ),
       };
     });

@@ -6,7 +6,14 @@ import { ColumnAssignment } from '../base/types/column-assignment';
 import { WeekSlice } from './types/week-slice';
 import { timeToRow, durationToRowSpan } from '../utils/time-utils';
 import { assignColumns } from '../utils/assign-columns';
-import { DAYS_IN_WEEK, MAX_ROWS } from '../constants';
+import {
+  DAYS_IN_WEEK,
+  MAX_ROWS,
+  EVENT_EDGE_PADDING_LEFT,
+  EVENT_EDGE_PADDING_RIGHT,
+  EVENT_INNER_PADDING,
+  MAX_VISIBLE_TIME_EVENTS,
+} from '../constants';
 
 /**
  * Layout engine for the 7-day week calendar view.
@@ -55,10 +62,12 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
     return slicesPerDay;
   }
 
-  /** Assign sub-columns per day and build positioned events. */
+  /** Assign sub-columns per day, cap overflow, and build positioned events. */
   private positionSlices(slicesPerDay: WeekSlice[][]): PositionedEvent[] {
     const dayWidth = 100 / DAYS_IN_WEEK;
+    const cap = MAX_VISIBLE_TIME_EVENTS;
     const positioned: PositionedEvent[] = [];
+
     for (let dayNum = 0; dayNum < DAYS_IN_WEEK; dayNum++) {
       const slices = slicesPerDay[dayNum];
       if (!slices.length) continue;
@@ -66,8 +75,34 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
         a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
       );
       const columns = assignColumns(slices);
-      for (let si = 0; si < slices.length; si++) {
-        positioned.push(this.buildEvent(slices[si], columns[si], dayWidth));
+      const { visible, badges } = this.capAndSplit(slices, columns, cap);
+
+      for (const { slice, colIndex, totalColumns } of visible) {
+        positioned.push(this.buildEvent(slice, { colIndex, totalColumns }, dayWidth));
+      }
+
+      for (const { event, startRow, rowSpan, count } of badges) {
+        const totalColumns = cap + 1;
+        positioned.push({
+          ...event,
+          id: `overflow-time-${dayNum}-${event.id}-${startRow}`,
+          layout: this.buildPositionLayout(
+            dayNum * dayWidth + cap * (dayWidth / totalColumns),
+            dayWidth / totalColumns,
+            startRow,
+            0,
+            dayNum + 1,
+            1,
+          ),
+          sizing: this.buildSizing({
+            heightPercent: rowSpan * (100 / MAX_ROWS),
+            topPercent: startRow * (100 / MAX_ROWS),
+          }),
+          metadata: {
+            ...this.buildViewMetadata(dayNum, count, event.start, event.end, rowSpan),
+            sourceId: event.id,
+          },
+        });
       }
     }
     return positioned;
@@ -99,8 +134,8 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
           event.start,
           event.end,
           rowSpan,
-          colIndex === 0 ? 6 : 1,
-          colIndex === totalColumns - 1 ? 6 : 1,
+          colIndex === 0 ? EVENT_EDGE_PADDING_LEFT : EVENT_INNER_PADDING,
+          colIndex === totalColumns - 1 ? EVENT_EDGE_PADDING_RIGHT : EVENT_INNER_PADDING,
         ),
         sourceId: event.id,
       },

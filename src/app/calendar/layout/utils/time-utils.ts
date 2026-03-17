@@ -19,7 +19,7 @@ export function durationToRowSpan(
   rowsPerHour = ROWS_PER_HOUR,
 ): number {
   const mins = end.diff(start, 'minutes').minutes;
-  return Math.max(1, Math.ceil(mins / (60 / rowsPerHour)));
+  return Math.max(2, Math.ceil(mins / (60 / rowsPerHour)));
 }
 
 /**

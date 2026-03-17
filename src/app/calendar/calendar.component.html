@@ -133,8 +133,15 @@
                 (mouseleave)="onDayMouseLeave()"
                 (click)="onDayClick(day)"
               >
-                @if (isTimeView() && hoveredTimeSlot()?.day?.hasSame(day, 'day')) {
-                  <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
+                @if (
+                  isTimeView() &&
+                  !timeDragSelection() &&
+                  hoveredTimeSlot()?.day?.hasSame(day, 'day')
+                ) {
+                  <div
+                    class="time-hover-stripe"
+                    [style.top.px]="hoveredTimeSlot()!.row * rowHeight()"
+                  ></div>
                 }
                 @if (isTimeView() && timeDragStripes()[dayIndex]; as stripe) {
                   <div
@@ -170,8 +177,10 @@
             <div
               class="event"
               [class.hovered]="
+                !timeDragSelection() &&
                 (hoveredEventId() ?? selectedEvent()?.id) === (event.metadata.sourceId ?? event.id)
               "
+              [style.pointer-events]="timeDragSelection() ? 'none' : null"
               [ngStyle]="eventStyles(event)"
               (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
               (mouseleave)="hoveredEventId.set(null)"

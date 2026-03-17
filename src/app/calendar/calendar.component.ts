@@ -34,6 +34,11 @@ import {
 import { ColorPickerComponent } from './components/color-picker/color-picker.component';
 import { EventTimeRangeComponent } from './components/event-time-range/event-time-range.component';
 import { EVENT_MOCK } from './testing/event-mock';
+import {
+  EVENT_EDGE_PADDING_LEFT,
+  EVENT_EDGE_PADDING_RIGHT,
+  ROW_HEIGHT_PX,
+} from './layout/constants';
 
 const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
 
@@ -44,6 +49,7 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
   host: {
     style: 'display:flex;width:100%;height:100%;',
     '[class]': 'view()',
+    '[style.--row-height]': 'rowHeight() + "px"',
   },
   imports: [
     MatButtonModule,
@@ -205,8 +211,7 @@ export class CalendarComponent implements OnInit {
       const scrollContainer = document.querySelector('.scroll-container') as HTMLElement;
       if (scrollContainer) {
         // 7:30 AM = row 30 (7.5 hours * 4 rows per hour)
-        // Each row is 30px, so scroll to: 30 * 30 = 900px
-        scrollContainer.scrollTop = 7.5 * 4 * 30;
+        scrollContainer.scrollTop = 7.5 * 4 * this.rowHeight();
       }
     }, 100);
   }
@@ -233,6 +238,8 @@ export class CalendarComponent implements OnInit {
     }
     return result;
   });
+  /** Height in pixels of one 15-minute grid row. Override via the `rowHeight` input. */
+  rowHeight = input(ROW_HEIGHT_PX);
   hoveredEventId = signal<string | null>(null);
   hoveredTimeSlot = signal<{ day: DateTime; row: number } | null>(null);
   hoveredWeekIndex = signal<number | null>(null);
@@ -281,7 +288,9 @@ export class CalendarComponent implements OnInit {
       const top = Math.min(sel.startRow, sel.endRow);
       const bot = Math.max(sel.startRow, sel.endRow);
       return Array.from({ length: dayCount }, (_, i) =>
-        i === sel.startDayIdx ? { top: top * 30, height: (bot - top + 1) * 30 } : null,
+        i === sel.startDayIdx
+          ? { top: top * this.rowHeight(), height: (bot - top + 1) * this.rowHeight() }
+          : null,
       );
     }
 
@@ -293,9 +302,13 @@ export class CalendarComponent implements OnInit {
 
     return Array.from({ length: dayCount }, (_, i) => {
       if (i < startDayIdx || i > endDayIdx) return null;
-      if (i === startDayIdx) return { top: startRow * 30, height: (MAX_ROW - startRow + 1) * 30 };
-      if (i === endDayIdx) return { top: 0, height: (endRow + 1) * 30 };
-      return { top: 0, height: (MAX_ROW + 1) * 30 }; // middle columns: full day
+      if (i === startDayIdx)
+        return {
+          top: startRow * this.rowHeight(),
+          height: (MAX_ROW - startRow + 1) * this.rowHeight(),
+        };
+      if (i === endDayIdx) return { top: 0, height: (endRow + 1) * this.rowHeight() };
+      return { top: 0, height: (MAX_ROW + 1) * this.rowHeight() }; // middle columns: full day
     });
   });
 
@@ -433,7 +446,7 @@ export class CalendarComponent implements OnInit {
   onDayMouseMove(event: MouseEvent, day: DateTime, dayIndex: number) {
     const el = event.currentTarget as HTMLElement;
     const row = Math.floor((event.offsetY / el.clientHeight) * 96);
-    this.hoveredTimeSlot.set({ day, row });
+    if (!this._isDragging) this.hoveredTimeSlot.set({ day, row });
 
     if (!this._timeDragAnchor) return;
     const anchor = this._timeDragAnchor;
@@ -553,8 +566,6 @@ export class CalendarComponent implements OnInit {
   }
 
   private resolveNewEventStart(day?: DateTime): DateTime {
-    const slot = this.hoveredTimeSlot();
-    if (slot && day) return this.rowToDateTime(day, slot.row);
     if (day) return day.set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
     return DateTime.now().startOf('hour').set({ hour: 10 });
   }
@@ -568,12 +579,12 @@ export class CalendarComponent implements OnInit {
 
   eventStyles(event: PositionedEvent): Record<string, string> {
     if (this.isTimeView()) {
-      const padL = event.metadata.paddingLeft ?? 6;
-      const padR = event.metadata.paddingRight ?? 6;
+      const padL = event.metadata.paddingLeft ?? EVENT_EDGE_PADDING_LEFT;
+      const padR = event.metadata.paddingRight ?? EVENT_EDGE_PADDING_RIGHT;
       const rowPct = event.layout.row * (100 / 96);
       const spanPct = (event.metadata.rowSpan || 1) * (100 / 96);
       return {
-        '--event-top': event.layout.row * 30 + 'px',
+        '--event-top': event.layout.row * this.rowHeight() + 'px',
         left: `calc(${event.layout.left}% + ${padL}px)`,
         width: `calc(${event.layout.width}% - ${padL + padR}px)`,
         top: `calc(${rowPct}% + 2px)`,

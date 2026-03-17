@@ -213,10 +213,10 @@
   flex-shrink: 0;
   position: sticky;
   left: 0;
-  height: 2880px;
+  height: calc(96 * var(--row-height, 20px));
   background-color: var(--mat-sys-primary-container);
   display: grid;
-  grid-template-rows: repeat(96, 30px);
+  grid-template-rows: repeat(96, var(--row-height, 20px));
   z-index: 1;
 }
 
@@ -290,9 +290,9 @@
 }
 
 :host(:is(.week, .day)) .calendar {
-  grid-template-rows: repeat(96, 30px);
+  grid-template-rows: repeat(96, var(--row-height, 20px));
   overflow: visible;
-  height: 2880px;
+  height: calc(96 * var(--row-height, 20px));
   min-height: auto;
   max-width: 100%;
 }
@@ -344,18 +344,18 @@
   z-index: auto;
 }
 
+:host(:is(.week, .day)) .calendar .day:first-child {
+  border-left: 1px solid var(--mat-sys-outline-variant);
+}
+
 .time-hover-stripe {
   position: absolute;
   left: 0;
   right: 0;
-  height: 30px;
+  height: var(--row-height, 20px);
   background-color: rgba(128, 128, 128, 0.15);
   pointer-events: none;
   z-index: 3;
-}
-
-:host(:is(.week, .day)) .calendar .day:first-child {
-  border-left: 1px solid var(--mat-sys-outline-variant);
 }
 
 :host(.month) .day:hover {
@@ -456,9 +456,12 @@
   position: absolute;
   left: 0;
   right: 0;
-  background-color: color-mix(in srgb, var(--mat-sys-primary) 15%, transparent);
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--mat-sys-primary) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-primary) 60%, transparent);
+  box-sizing: border-box;
   pointer-events: none;
-  z-index: 3;
+  z-index: 6;
 }
 
 :host(.month) .day.day-drag-selected {
