@@ -2,6 +2,7 @@ import { AfterViewInit, Component, signal, TemplateRef, ViewChild } from '@angul
 import { DateTime } from 'luxon';
 import { CalendarComponent } from '../../calendar.component';
 import { CalendarEvent } from '../../models/calendar-event';
+import { CalendarSource } from '../../models/calendar-source';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
@@ -206,7 +207,7 @@ function buildOrders(tpl: TemplateRef<{ $implicit: CalendarEvent }>): CalendarEv
   template: `
     <app-calendar
       style="width: 100%; height: 100%"
-      [events]="events()"
+      [calendars]="calendars()"
       [readonly]="true"
       initialView="week"
     />
@@ -379,12 +380,25 @@ export class ProductionCalendarComponent implements AfterViewInit {
   @ViewChild('orderTpl') private orderTpl!: TemplateRef<{ $implicit: CalendarEvent }>;
   @ViewChild('shiftTpl') private shiftTpl!: TemplateRef<{ $implicit: CalendarEvent }>;
 
-  events = signal<CalendarEvent[]>([]);
+  calendars = signal<CalendarSource[]>([]);
 
   ngAfterViewInit() {
     const from = DateTime.now().startOf('week');
     const to = from.plus({ weeks: 3 });
-    this.events.set([...generateShifts(from, to, this.shiftTpl), ...buildOrders(this.orderTpl)]);
+    this.calendars.set([
+      {
+        id: 'orders',
+        label: 'Production Orders',
+        color: COLORS.orderRunning,
+        events: buildOrders(this.orderTpl),
+      },
+      {
+        id: 'shifts',
+        label: 'Shifts',
+        color: COLORS.shiftDay,
+        events: generateShifts(from, to, this.shiftTpl),
+      },
+    ]);
   }
 
   orderOf(event: CalendarEvent): ProductionOrder {

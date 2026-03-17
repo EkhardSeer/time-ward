@@ -20,6 +20,54 @@
   flex: 1;
 }
 
+.calendar-source-toggles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+  flex-wrap: wrap;
+}
+
+.calendar-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 6px;
+  border-radius: 16px;
+  border: 2px solid var(--source-color, currentColor);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+  white-space: nowrap;
+
+  .chip-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--source-color, currentColor);
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+
+  &.disabled {
+    opacity: 0.45;
+
+    .chip-dot {
+      background-color: transparent;
+      border: 2px solid var(--source-color, currentColor);
+    }
+  }
+
+  &:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
 .event-details-panel {
   width: 360px;
   min-width: 300px;

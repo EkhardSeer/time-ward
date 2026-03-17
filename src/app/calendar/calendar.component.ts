@@ -16,6 +16,7 @@ import { CalendarWeekLayout } from './layout/week/calendar-week-layout';
 import { CalendarMonthLayout } from './layout/month/calendar-month-layout';
 import { CalendarDayLayout } from './layout/day/calendar-day-layout';
 import { CalendarEvent } from './models/calendar-event';
+import { CalendarSource } from './models/calendar-source';
 import { PositionedEvent } from './models/positioned-event';
 import { CALENDAR_I18N } from './models/calendar-i18n';
 import { MatButtonModule } from '@angular/material/button';
@@ -72,6 +73,12 @@ export class CalendarComponent implements OnInit {
   // ── Inputs ────────────────────────────────────────────────────────────────
   /** External events. When provided, the component emits changes via outputs instead of owning its state. */
   eventsInput = input<CalendarEvent[] | undefined>(undefined, { alias: 'events' });
+  /**
+   * Multiple named event sources. When provided, a toggle chip is shown per
+   * source in the toolbar and only visible sources contribute events to the grid.
+   * Takes precedence over the flat `[events]` input.
+   */
+  calendars = input<CalendarSource[] | undefined>(undefined);
   /** Disables all editing interactions (no dialog, no FAB). */
   readonly = input(false);
   /** Show or hide the floating add button. Default: true. */
@@ -357,8 +364,37 @@ export class CalendarComponent implements OnInit {
 
   /** Internal event store used in standalone mode (no [events] input bound). */
   private _ownEvents = signal<CalendarEvent[]>(EVENT_MOCK);
-  /** Active events: external input takes precedence over internal state. */
-  events = computed(() => this.eventsInput() ?? this._ownEvents());
+
+  /**
+   * Set of calendar source IDs the user has hidden.
+   * All sources are visible by default; toggling adds/removes from this set.
+   */
+  private _disabledCalendars = signal<Set<string>>(new Set());
+
+  /** Active events: multi-calendar sources take precedence, then external flat input, then internal store. */
+  events = computed(() => {
+    const sources = this.calendars();
+    if (sources) {
+      const disabled = this._disabledCalendars();
+      return sources.filter((s) => !disabled.has(s.id)).flatMap((s) => s.events);
+    }
+    return this.eventsInput() ?? this._ownEvents();
+  });
+
+  /** Toggle a calendar source on/off. */
+  toggleCalendar(id: string): void {
+    this._disabledCalendars.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  /** Returns true when the source with `id` is currently visible. */
+  isCalendarEnabled(id: string): boolean {
+    return !this._disabledCalendars().has(id);
+  }
 
   constructor(private dialog: MatDialog) {
     effect(() => {

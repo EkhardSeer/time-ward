@@ -23,6 +23,24 @@
         </span>
       </div>
       <span class="header-spacer"></span>
+      @if (calendars(); as sources) {
+        <div class="calendar-source-toggles">
+          @for (source of sources; track source.id) {
+            <button
+              class="calendar-source-chip"
+              [class.disabled]="!isCalendarEnabled(source.id)"
+              [style.--source-color]="source.color"
+              (click)="toggleCalendar(source.id)"
+              [title]="
+                isCalendarEnabled(source.id) ? 'Hide ' + source.label : 'Show ' + source.label
+              "
+            >
+              <span class="chip-dot"></span>
+              <span class="chip-label">{{ source.label }}</span>
+            </button>
+          }
+        </div>
+      }
       @if (showViewToggle()) {
         <mat-button-toggle-group
           [value]="view()"
