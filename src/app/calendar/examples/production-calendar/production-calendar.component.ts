@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { CalendarComponent } from '../../calendar.component';
 import { CalendarEvent } from '../../models/calendar-event';
 import { CalendarSource } from '../../models/calendar-source';
+import { buildCalendarEvents } from '../../utils/build-calendar-events';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
@@ -18,12 +19,21 @@ export interface ProductionOrder {
   machine: string;
   status: 'planned' | 'running' | 'done';
   components: { name: string; qty: number; unit: string }[];
+  /** Pre-computed for buildCalendarEvents mapping. */
+  title: string;
+  start: DateTime;
+  end: DateTime;
 }
 
 export interface ShiftInfo {
+  id: string;
   name: string;
   crew: string;
   capacity: number;
+  title: string;
+  start: DateTime;
+  end: DateTime;
+  color: string;
 }
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -52,7 +62,7 @@ function generateShifts(
   to: DateTime,
   tpl: TemplateRef<{ $implicit: CalendarEvent }>,
 ): CalendarEvent[] {
-  const events: CalendarEvent[] = [];
+  const entries: ShiftInfo[] = [];
   let day = from.startOf('day');
   while (day <= to) {
     if (day.weekday <= 5) {
@@ -62,21 +72,24 @@ function generateShifts(
           def.endH >= 24
             ? day.plus({ days: 1 }).set({ hour: def.endH - 24, minute: 0, second: 0 })
             : day.set({ hour: def.endH, minute: 0, second: 0 });
-        const info: ShiftInfo = { name: `${def.name} Shift`, crew: def.crew, capacity: 100 };
-        events.push({
+        entries.push({
           id: `shift-${day.toISODate()}-${i}`,
+          name: `${def.name} Shift`,
+          crew: def.crew,
+          capacity: 100,
           title: `${def.name} · ${def.crew}`,
           start,
           end,
           color: def.color,
-          sidebarTemplate: tpl,
-          data: { type: 'shift', source: info },
         });
       });
     }
     day = day.plus({ days: 1 });
   }
-  return events;
+  return buildCalendarEvents(entries, 'id', 'title', 'start', 'end', {
+    color: (s) => s.color,
+    sidebarTemplate: tpl,
+  });
 }
 
 // ── Mock production orders ────────────────────────────────────────────────────
@@ -84,7 +97,12 @@ function generateShifts(
 function buildOrders(tpl: TemplateRef<{ $implicit: CalendarEvent }>): CalendarEvent[] {
   const week = DateTime.now().startOf('week');
 
-  const defs: { day: number; startH: number; hours: number; order: ProductionOrder }[] = [
+  const defs: {
+    day: number;
+    startH: number;
+    hours: number;
+    order: Omit<ProductionOrder, 'title' | 'start' | 'end'>;
+  }[] = [
     {
       day: 0,
       startH: 6,
@@ -177,25 +195,32 @@ function buildOrders(tpl: TemplateRef<{ $implicit: CalendarEvent }>): CalendarEv
     },
   ];
 
-  return defs.map((d) => {
-    const start = week.plus({ days: d.day }).set({ hour: d.startH, minute: 0, second: 0 });
-    const end = start.plus({ hours: d.hours });
-    const color =
-      d.order.status === 'done'
-        ? COLORS.orderDone
-        : d.order.status === 'running'
-          ? COLORS.orderRunning
-          : COLORS.orderPlanned;
-    return {
-      id: d.order.orderId,
-      title: `${d.order.orderId} · ${d.order.article}`,
-      start,
-      end,
-      color,
+  return buildCalendarEvents(
+    defs.map((d) => {
+      const start = week.plus({ days: d.day }).set({ hour: d.startH, minute: 0, second: 0 });
+      const end = start.plus({ hours: d.hours });
+      const order: ProductionOrder = {
+        ...d.order,
+        title: `${d.order.orderId} · ${d.order.article}`,
+        start,
+        end,
+      };
+      return order;
+    }),
+    'orderId',
+    'title',
+    'start',
+    'end',
+    {
+      color: (o) =>
+        o.status === 'done'
+          ? COLORS.orderDone
+          : o.status === 'running'
+            ? COLORS.orderRunning
+            : COLORS.orderPlanned,
       sidebarTemplate: tpl,
-      data: { type: 'order', source: d.order },
-    };
-  });
+    },
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -402,10 +427,10 @@ export class ProductionCalendarComponent implements AfterViewInit {
   }
 
   orderOf(event: CalendarEvent): ProductionOrder {
-    return (event.data as { source: ProductionOrder }).source;
+    return event.data as ProductionOrder;
   }
 
   shiftOf(event: CalendarEvent): ShiftInfo {
-    return (event.data as { source: ShiftInfo }).source;
+    return event.data as ShiftInfo;
   }
 }
