@@ -27,6 +27,37 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'demo/crud',
+    loadComponent: () =>
+      import('./calendar/examples/crud-demo/crud-demo.component').then((m) => m.CrudDemoComponent),
+  },
+  {
+    path: 'demo/config',
+    loadComponent: () =>
+      import('./calendar/examples/config-demo/config-demo.component').then(
+        (m) => m.ConfigDemoComponent,
+      ),
+  },
+  {
+    path: 'demo/overflow',
+    loadComponent: () =>
+      import('./calendar/examples/overflow-demo/overflow-demo.component').then(
+        (m) => m.OverflowDemoComponent,
+      ),
+  },
+  {
+    path: 'demo/builder',
+    loadComponent: () =>
+      import('./calendar/examples/builder-demo/builder-demo.component').then(
+        (m) => m.BuilderDemoComponent,
+      ),
+  },
+  {
+    path: 'demo/drag',
+    loadComponent: () =>
+      import('./calendar/examples/drag-demo/drag-demo.component').then((m) => m.DragDemoComponent),
+  },
+  {
     path: 'production',
     loadComponent: () =>
       import('./calendar/examples/production-calendar/production-calendar.component').then(
