@@ -31,10 +31,14 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
   }
 
   /** Layout events for week view with side-by-side overlap handling. */
-  layoutWeek(events: CalendarEvent[], week: DateTime[]): PositionedEvent[] {
+  layoutWeek(
+    events: CalendarEvent[],
+    week: DateTime[],
+    maxColumns = MAX_VISIBLE_TIME_EVENTS,
+  ): PositionedEvent[] {
     const weekStart = week[0].startOf('day');
     const slicesPerDay = this.collectSlices(events, weekStart);
-    return this.positionSlices(slicesPerDay);
+    return this.positionSlices(slicesPerDay, maxColumns);
   }
 
   /** Collect one slice per event per day it occupies within the week. */
@@ -65,9 +69,8 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
   }
 
   /** Assign sub-columns per day, cap overflow, and build positioned events. */
-  private positionSlices(slicesPerDay: WeekSlice[][]): PositionedEvent[] {
+  private positionSlices(slicesPerDay: WeekSlice[][], cap: number): PositionedEvent[] {
     const dayWidth = 100 / DAYS_IN_WEEK;
-    const cap = MAX_VISIBLE_TIME_EVENTS;
     const positioned: PositionedEvent[] = [];
 
     for (let dayNum = 0; dayNum < DAYS_IN_WEEK; dayNum++) {

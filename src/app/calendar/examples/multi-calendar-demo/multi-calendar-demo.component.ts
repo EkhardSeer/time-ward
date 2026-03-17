@@ -112,6 +112,7 @@ const evaShifts = buildShifts(
       initialView="week"
       [showSidebar]="false"
       [rowHeight]="24"
+      [maxOverlapColumns]="5"
     />
   `,
   styles: `

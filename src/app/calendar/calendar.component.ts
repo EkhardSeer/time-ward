@@ -107,6 +107,13 @@ export class CalendarComponent implements OnInit {
    * No button is rendered when the array is empty.
    */
   actions = input<CalendarAction[]>([]);
+  /**
+   * Maximum number of side-by-side event columns rendered per day in week view.
+   * When more events overlap at the same time, the extras collapse into a
+   * "+N more" badge. Increase this when using `[calendars]` with many sources.
+   * Default: 3.
+   */
+  maxOverlapColumns = input(3);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   /** Emitted when the user saves a new event. */
@@ -430,7 +437,9 @@ export class CalendarComponent implements OnInit {
       const view = this.view();
       if (view === 'week') {
         const week = this.weeks()[0];
-        this.positionedEvents.set(this.weekLayoutEngine.layoutWeek(events, week));
+        this.positionedEvents.set(
+          this.weekLayoutEngine.layoutWeek(events, week, this.maxOverlapColumns()),
+        );
         return;
       }
       if (view === 'day') {
