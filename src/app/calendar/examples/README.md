@@ -41,15 +41,20 @@ Key inputs/outputs shown: `[actions]`, `(actionTriggered)`, `[events]`, `[showSi
 
 **Route:** `/demo/multi-calendar`
 
-Demonstrates the `[calendars]` input with three independent `CalendarSource` objects.
+Demonstrates the `[calendars]` input as a **shift planning board** — 5 staff members, each as an independent `CalendarSource` with their own colour. Toggle any person's chip in the toolbar to show or hide their schedule.
 
-- **Work** calendar (blue `#1565c0`) — recurring daily standups and weekly meetings.
-- **Personal** calendar (green `#2e7d32`) — gym sessions, lunch plans, and appointments.
-- **Holidays** calendar (orange `#e65100`) — all-day public holiday markers.
-- The toolbar renders a chip for each source. Clicking a chip toggles that calendar on/off.
-- `buildCalendarEvents` is used to map domain objects for each source.
+| Person      | Color       | Pattern                                |
+| ----------- | ----------- | -------------------------------------- |
+| Alice Chen  | Blue        | Day shifts Mon–Wed + Sat               |
+| Ben Walsh   | Green       | Morning shifts Mon, Tue, Thu, Fri, Sun |
+| Carol Park  | Purple      | Late shifts Tue–Sat                    |
+| Dave Torres | Teal        | Day shifts Mon, Wed–Fri + short Sat    |
+| Eva Müller  | Deep orange | Late shifts Mon–Tue + weekend coverage |
 
-Key inputs shown: `[calendars]`, `CalendarSource`, `buildCalendarEvents`
+- All shifts are anchored to the current ISO week so the view lands on the right week automatically.
+- `buildCalendarEvents` is used to map plain shift definitions into `CalendarEvent[]` for each source.
+
+Key inputs shown: `[calendars]`, `CalendarSource`, `buildCalendarEvents`, `[rowHeight]`
 
 ---
 

@@ -1,108 +1,102 @@
-import { AfterViewInit, Component, signal, TemplateRef, ViewChild } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { DateTime } from 'luxon';
 import { CalendarComponent } from '../../calendar.component';
 import { CalendarSource } from '../../models/calendar-source';
 import { buildCalendarEvents } from '../../utils/build-calendar-events';
 
-// ── Work events ───────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function workEvents() {
-  const t = DateTime.now().startOf('day');
+/** Monday of the current ISO week. */
+const WEEK_START = DateTime.now().startOf('week');
+
+interface ShiftDef {
+  day: number; // 0 = Mon … 6 = Sun
+  start: number; // hour (24h)
+  end: number;
+  label: string;
+}
+
+function buildShifts(personId: string, shifts: ShiftDef[], color: string) {
   return buildCalendarEvents(
-    [
-      {
-        id: 'w1',
-        title: 'Team Stand-up',
-        start: t.set({ hour: 9 }),
-        end: t.set({ hour: 9, minute: 30 }),
-      },
-      {
-        id: 'w2',
-        title: 'Sprint Review',
-        start: t.plus({ days: 1 }).set({ hour: 10 }),
-        end: t.plus({ days: 1 }).set({ hour: 11 }),
-      },
-      {
-        id: 'w3',
-        title: 'Client Call',
-        start: t.plus({ days: 2 }).set({ hour: 14 }),
-        end: t.plus({ days: 2 }).set({ hour: 15 }),
-      },
-      {
-        id: 'w4',
-        title: 'Architecture Sync',
-        start: t.plus({ days: 3 }).set({ hour: 11 }),
-        end: t.plus({ days: 3 }).set({ hour: 12 }),
-      },
-      {
-        id: 'w5',
-        title: '1:1 with Manager',
-        start: t.plus({ days: 4 }).set({ hour: 16 }),
-        end: t.plus({ days: 4 }).set({ hour: 17 }),
-      },
-    ],
+    shifts.map(({ day, start, end, label }) => ({
+      id: `${personId}-${day}`,
+      title: label,
+      start: WEEK_START.plus({ days: day }).set({ hour: start, minute: 0, second: 0 }),
+      end: WEEK_START.plus({ days: day }).set({ hour: end, minute: 0, second: 0 }),
+    })),
     'id',
     'title',
     'start',
     'end',
-    { color: '#1565c0' },
+    { color },
   );
 }
 
-// ── Personal events ───────────────────────────────────────────────────────────
+// ── Staff schedules ───────────────────────────────────────────────────────────
 
-function personalEvents() {
-  const t = DateTime.now().startOf('day');
-  return buildCalendarEvents(
-    [
-      { id: 'p1', title: 'Gym', start: t.set({ hour: 7 }), end: t.set({ hour: 8 }) },
-      {
-        id: 'p2',
-        title: 'Doctor Appointment',
-        start: t.plus({ days: 1 }).set({ hour: 13 }),
-        end: t.plus({ days: 1 }).set({ hour: 13, minute: 30 }),
-      },
-      {
-        id: 'p3',
-        title: 'Dinner with Family',
-        start: t.plus({ days: 2 }).set({ hour: 19 }),
-        end: t.plus({ days: 2 }).set({ hour: 21 }),
-      },
-      {
-        id: 'p4',
-        title: 'Hiking Trip',
-        start: t.plus({ days: 5 }).set({ hour: 8 }),
-        end: t.plus({ days: 5 }).set({ hour: 17 }),
-      },
-    ],
-    'id',
-    'title',
-    'start',
-    'end',
-    { color: '#2e7d32' },
-  );
-}
+// Alice Chen — day shifts Mon–Wed + Saturday
+const aliceShifts = buildShifts(
+  'alice',
+  [
+    { day: 0, start: 9, end: 17, label: 'Day Shift' },
+    { day: 1, start: 9, end: 17, label: 'Day Shift' },
+    { day: 2, start: 9, end: 17, label: 'Day Shift' },
+    { day: 5, start: 10, end: 18, label: 'Day Shift' },
+  ],
+  '#1565c0',
+);
 
-// ── Holiday events ────────────────────────────────────────────────────────────
+// Ben Walsh — morning shifts Mon, Tue, Thu, Fri, Sun
+const benShifts = buildShifts(
+  'ben',
+  [
+    { day: 0, start: 6, end: 14, label: 'Morning Shift' },
+    { day: 1, start: 6, end: 14, label: 'Morning Shift' },
+    { day: 3, start: 6, end: 14, label: 'Morning Shift' },
+    { day: 4, start: 6, end: 14, label: 'Morning Shift' },
+    { day: 6, start: 6, end: 14, label: 'Morning Shift' },
+  ],
+  '#2e7d32',
+);
 
-function holidayEvents() {
-  const t = DateTime.now().startOf('day');
-  return buildCalendarEvents(
-    [
-      {
-        id: 'h1',
-        title: 'Public Holiday',
-        start: t.plus({ days: 6 }).set({ hour: 0 }),
-        end: t.plus({ days: 6 }).set({ hour: 23, minute: 59 }),
-      },
-    ],
-    'id',
-    'title',
-    'start',
-    'end',
-    { color: '#e65100' },
-  );
-}
+// Carol Park — late shifts Tue–Fri + Saturday
+const carolShifts = buildShifts(
+  'carol',
+  [
+    { day: 1, start: 14, end: 22, label: 'Late Shift' },
+    { day: 2, start: 14, end: 22, label: 'Late Shift' },
+    { day: 3, start: 14, end: 22, label: 'Late Shift' },
+    { day: 4, start: 14, end: 22, label: 'Late Shift' },
+    { day: 5, start: 14, end: 22, label: 'Late Shift' },
+  ],
+  '#6a1b9a',
+);
+
+// Dave Torres — day shifts Mon, Wed–Fri + short Saturday
+const daveShifts = buildShifts(
+  'dave',
+  [
+    { day: 0, start: 9, end: 17, label: 'Day Shift' },
+    { day: 2, start: 9, end: 17, label: 'Day Shift' },
+    { day: 3, start: 9, end: 17, label: 'Day Shift' },
+    { day: 4, start: 9, end: 17, label: 'Day Shift' },
+    { day: 5, start: 9, end: 15, label: 'Short Shift' },
+  ],
+  '#00695c',
+);
+
+// Eva Müller — late shifts Mon–Tue + weekend coverage
+const evaShifts = buildShifts(
+  'eva',
+  [
+    { day: 0, start: 14, end: 22, label: 'Late Shift' },
+    { day: 1, start: 14, end: 22, label: 'Late Shift' },
+    { day: 4, start: 14, end: 22, label: 'Late Shift' },
+    { day: 5, start: 10, end: 18, label: 'Day Shift' },
+    { day: 6, start: 10, end: 18, label: 'Day Shift' },
+  ],
+  '#bf360c',
+);
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -117,6 +111,7 @@ function holidayEvents() {
       [readonly]="true"
       initialView="week"
       [showSidebar]="false"
+      [rowHeight]="24"
     />
   `,
   styles: `
@@ -129,8 +124,10 @@ function holidayEvents() {
 })
 export class MultiCalendarDemoComponent {
   readonly calendars = signal<CalendarSource[]>([
-    { id: 'work', label: 'Work', color: '#1565c0', events: workEvents() },
-    { id: 'personal', label: 'Personal', color: '#2e7d32', events: personalEvents() },
-    { id: 'holidays', label: 'Holidays', color: '#e65100', events: holidayEvents() },
+    { id: 'alice', label: 'Alice Chen', color: '#1565c0', events: aliceShifts },
+    { id: 'ben', label: 'Ben Walsh', color: '#2e7d32', events: benShifts },
+    { id: 'carol', label: 'Carol Park', color: '#6a1b9a', events: carolShifts },
+    { id: 'dave', label: 'Dave Torres', color: '#00695c', events: daveShifts },
+    { id: 'eva', label: 'Eva Müller', color: '#bf360c', events: evaShifts },
   ]);
 }
