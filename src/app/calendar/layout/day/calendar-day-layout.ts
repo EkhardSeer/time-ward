@@ -25,7 +25,11 @@ export class CalendarDayLayout extends CalendarLayoutBase {
   layoutDay(events: CalendarEvent[], day: DateTime): PositionedEvent[] {
     const slices = this.collectSlices(events, day);
     slices.sort((a, b) =>
-      a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
+      a.sourceOrder !== b.sourceOrder
+        ? a.sourceOrder - b.sourceOrder
+        : a.startRow !== b.startRow
+          ? a.startRow - b.startRow
+          : b.rowSpan - a.rowSpan,
     );
     return this.positionSlices(slices);
   }
@@ -35,7 +39,8 @@ export class CalendarDayLayout extends CalendarLayoutBase {
     const dayStart = day.startOf('day');
     const dayEnd = day.endOf('day');
     const slices: DaySlice[] = [];
-    for (const event of events) {
+    for (let ei = 0; ei < events.length; ei++) {
+      const event = events[ei];
       if (event.end <= dayStart || event.start >= dayEnd) continue;
       const clippedStart = event.start < dayStart ? dayStart : event.start;
       const clippedEnd = event.end > dayEnd ? dayEnd : event.end;
@@ -43,6 +48,7 @@ export class CalendarDayLayout extends CalendarLayoutBase {
         event,
         startRow: timeToRow(clippedStart),
         rowSpan: durationToRowSpan(clippedStart, clippedEnd),
+        sourceOrder: ei,
       });
     }
     return slices;

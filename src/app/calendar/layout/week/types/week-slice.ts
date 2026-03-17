@@ -31,4 +31,11 @@ export interface WeekSlice {
    * 0 = first day of the week (Monday in ISO weeks), 6 = last day (Sunday).
    */
   dayNum: number;
+  /**
+   * Position of the source event in the input `events` array passed to the
+   * layout engine. Used as a stable tiebreaker in the sort so that events
+   * from earlier calendar sources are always assigned lower column indices
+   * (i.e. rendered further to the left) than events from later sources.
+   */
+  sourceOrder: number;
 }

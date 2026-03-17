@@ -40,7 +40,8 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
   /** Collect one slice per event per day it occupies within the week. */
   private collectSlices(events: CalendarEvent[], weekStart: DateTime): WeekSlice[][] {
     const slicesPerDay: WeekSlice[][] = Array.from({ length: DAYS_IN_WEEK }, () => []);
-    for (const event of events) {
+    for (let ei = 0; ei < events.length; ei++) {
+      const event = events[ei];
       const dayIndex = Math.floor(event.start.diff(weekStart, 'days').days);
       const endDayIndex = Math.floor(event.end.diff(weekStart, 'days').days);
       if (endDayIndex < 0 || dayIndex >= DAYS_IN_WEEK) continue;
@@ -56,6 +57,7 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
           startRow: timeToRow(clippedStart),
           rowSpan: durationToRowSpan(clippedStart, clippedEnd),
           dayNum,
+          sourceOrder: ei,
         });
       }
     }
@@ -72,7 +74,11 @@ export class CalendarWeekLayout extends CalendarLayoutBase {
       const slices = slicesPerDay[dayNum];
       if (!slices.length) continue;
       slices.sort((a, b) =>
-        a.startRow !== b.startRow ? a.startRow - b.startRow : b.rowSpan - a.rowSpan,
+        a.sourceOrder !== b.sourceOrder
+          ? a.sourceOrder - b.sourceOrder
+          : a.startRow !== b.startRow
+            ? a.startRow - b.startRow
+            : b.rowSpan - a.rowSpan,
       );
       const columns = assignColumns(slices);
       const { visible, badges } = this.capAndSplit(slices, columns, cap);
