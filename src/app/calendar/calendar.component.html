@@ -122,13 +122,26 @@
               <div
                 class="day"
                 [class.week-row-hovered]="!isTimeView() && hoveredWeekIndex() === weekIndex"
+                [class.day-drag-selected]="
+                  !isTimeView() && monthSelectedDays().has(day.startOf('day').toMillis())
+                "
                 [style.gridColumn]="!isTimeView() ? '' : view() === 'day' ? '1' : dayIndex + 1"
-                (mousemove)="isTimeView() && onDayMouseMove($event, day)"
+                (mousedown)="onDayMouseDown($event, day, dayIndex)"
+                (mouseup)="onDayMouseUp($event, day, dayIndex)"
+                (mouseenter)="onDayMouseEnter(day)"
+                (mousemove)="isTimeView() && onDayMouseMove($event, day, dayIndex)"
                 (mouseleave)="onDayMouseLeave()"
-                (click)="!isTimeView() ? dayLayout(day) : readonly() ? null : addEvent(day)"
+                (click)="onDayClick(day)"
               >
                 @if (isTimeView() && hoveredTimeSlot()?.day?.hasSame(day, 'day')) {
                   <div class="time-hover-stripe" [style.top.px]="hoveredTimeSlot()!.row * 30"></div>
+                }
+                @if (isTimeView() && timeDragStripes()[dayIndex]; as stripe) {
+                  <div
+                    class="time-drag-stripe"
+                    [style.top.px]="stripe.top"
+                    [style.height.px]="stripe.height"
+                  ></div>
                 }
                 <span class="day-number">{{ day.day }}</span>
               </div>

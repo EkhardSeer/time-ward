@@ -2,6 +2,7 @@ import {
   Component,
   computed,
   effect,
+  HostListener,
   inject,
   input,
   OnInit,
@@ -237,6 +238,84 @@ export class CalendarComponent implements OnInit {
   hoveredWeekIndex = signal<number | null>(null);
   isTimeView = computed(() => this.view() !== 'month');
 
+  // ── Drag-to-create state ─────────────────────────────────────────────────
+  /** Selection rectangle currently being dragged in week/day view. */
+  timeDragSelection = signal<{
+    startDay: DateTime;
+    startRow: number;
+    startDayIdx: number;
+    endDay: DateTime;
+    endRow: number;
+    endDayIdx: number;
+  } | null>(null);
+  /** Month-view drag: the cell where the drag started. */
+  monthDragAnchor = signal<DateTime | null>(null);
+  /** Month-view drag: the cell currently under the pointer. */
+  monthDragEnd = signal<DateTime | null>(null);
+
+  private _timeDragAnchor: { day: DateTime; row: number; dayIndex: number } | null = null;
+  private _isDragging = false;
+  private _suppressNextClick = false;
+  private _isMonthDragging = false;
+
+  /**
+   * Per-column drag highlight for time views.
+   * Returns an array indexed by day column (0-6 in week view, always [0] in day view).
+   * Each entry is `{ top, height }` in pixels when the column is covered by the drag,
+   * or `null` when it is not.
+   *
+   * For cross-column drags the selection is a staircase shape:
+   *   - start column: from anchor row → bottom of day
+   *   - middle columns: full day
+   *   - end column: top of day → end row
+   */
+  timeDragStripes = computed((): Array<{ top: number; height: number } | null> => {
+    const sel = this.timeDragSelection();
+    const dayCount = this.view() === 'day' ? 1 : 7;
+    if (!sel) return Array(dayCount).fill(null);
+
+    const MAX_ROW = 95; // last 15-min slot of the day
+
+    // Same column — simple vertical range
+    if (sel.startDayIdx === sel.endDayIdx) {
+      const top = Math.min(sel.startRow, sel.endRow);
+      const bot = Math.max(sel.startRow, sel.endRow);
+      return Array.from({ length: dayCount }, (_, i) =>
+        i === sel.startDayIdx ? { top: top * 30, height: (bot - top + 1) * 30 } : null,
+      );
+    }
+
+    // Cross-column: determine chronological start and end columns
+    const [startDayIdx, startRow, endDayIdx, endRow] =
+      sel.startDayIdx < sel.endDayIdx
+        ? [sel.startDayIdx, sel.startRow, sel.endDayIdx, sel.endRow]
+        : [sel.endDayIdx, sel.endRow, sel.startDayIdx, sel.startRow];
+
+    return Array.from({ length: dayCount }, (_, i) => {
+      if (i < startDayIdx || i > endDayIdx) return null;
+      if (i === startDayIdx) return { top: startRow * 30, height: (MAX_ROW - startRow + 1) * 30 };
+      if (i === endDayIdx) return { top: 0, height: (endRow + 1) * 30 };
+      return { top: 0, height: (MAX_ROW + 1) * 30 }; // middle columns: full day
+    });
+  });
+
+  /** Set of day-start millis covered by the current month-view drag selection. */
+  monthSelectedDays = computed((): Set<number> => {
+    const anchor = this.monthDragAnchor();
+    const end = this.monthDragEnd();
+    if (!anchor || !end) return new Set();
+    const from = anchor < end ? anchor : end;
+    const to = anchor < end ? end : anchor;
+    const set = new Set<number>();
+    let cur = from.startOf('day');
+    const last = to.startOf('day');
+    while (cur <= last) {
+      set.add(cur.toMillis());
+      cur = cur.plus({ days: 1 });
+    }
+    return set;
+  });
+
   // Generate hourly time markers for week view (0-24)
   hourMarkers = computed(() => {
     return Array.from({ length: 25 }, (_, i) => i);
@@ -334,10 +413,117 @@ export class CalendarComponent implements OnInit {
     else this.dayLayout(this.date());
   }
 
-  onDayMouseMove(event: MouseEvent, day: DateTime) {
+  onDayMouseDown(event: MouseEvent, day: DateTime, dayIndex: number) {
+    if (this.readonly()) return;
+    if (this.isTimeView()) {
+      const el = event.currentTarget as HTMLElement;
+      const row = Math.floor((event.offsetY / el.clientHeight) * 96);
+      this._timeDragAnchor = { day, row, dayIndex };
+      this._isDragging = false;
+      this.timeDragSelection.set(null);
+    } else {
+      this._isMonthDragging = true;
+      this.monthDragAnchor.set(day);
+      this.monthDragEnd.set(day);
+    }
+    // Prevent text selection while dragging
+    event.preventDefault();
+  }
+
+  onDayMouseMove(event: MouseEvent, day: DateTime, dayIndex: number) {
     const el = event.currentTarget as HTMLElement;
     const row = Math.floor((event.offsetY / el.clientHeight) * 96);
     this.hoveredTimeSlot.set({ day, row });
+
+    if (!this._timeDragAnchor) return;
+    const anchor = this._timeDragAnchor;
+    if (!this._isDragging && (row !== anchor.row || dayIndex !== anchor.dayIndex)) {
+      this._isDragging = true;
+    }
+    if (this._isDragging) {
+      this.timeDragSelection.set({
+        startDay: anchor.day,
+        startRow: anchor.row,
+        startDayIdx: anchor.dayIndex,
+        endDay: day,
+        endRow: row,
+        endDayIdx: dayIndex,
+      });
+    }
+  }
+
+  onDayMouseEnter(day: DateTime) {
+    if (this._isMonthDragging) {
+      this.monthDragEnd.set(day);
+    }
+  }
+
+  onDayMouseUp(event: MouseEvent, day: DateTime, dayIndex: number) {
+    if (this.isTimeView()) {
+      if (this._isDragging && this._timeDragAnchor) {
+        const el = event.currentTarget as HTMLElement;
+        const endRow = Math.floor((event.offsetY / el.clientHeight) * 96);
+        const anchor = this._timeDragAnchor;
+        const startDayIdx = Math.min(anchor.dayIndex, dayIndex);
+        const endDayIdx = Math.max(anchor.dayIndex, dayIndex);
+        const week = this.weeks()[0];
+        const days = this.view() === 'day' ? [this.date()] : week;
+        const startDay = days[startDayIdx] ?? anchor.day;
+        const endDay = days[endDayIdx] ?? day;
+        const startRow = anchor.dayIndex <= dayIndex ? anchor.row : endRow;
+        const endRowFinal = anchor.dayIndex <= dayIndex ? endRow : anchor.row;
+        const [chronStart, chronEnd] =
+          startRow <= endRowFinal ? [startRow, endRowFinal] : [endRowFinal, startRow];
+        const start = this.rowToDateTime(startDay, chronStart);
+        const end = this.rowToDateTime(endDay, chronEnd + 1);
+        this._suppressNextClick = true;
+        this.openAddDialog(start, end);
+      }
+      this._timeDragAnchor = null;
+      this._isDragging = false;
+      this.timeDragSelection.set(null);
+    } else {
+      if (this._isMonthDragging) {
+        const anchor = this.monthDragAnchor();
+        const endDay = this.monthDragEnd();
+        if (anchor && endDay && !anchor.hasSame(endDay, 'day')) {
+          const from = anchor < endDay ? anchor : endDay;
+          const to = anchor < endDay ? endDay : anchor;
+          this._suppressNextClick = true;
+          this.openAddDialog(from.startOf('day'), to.endOf('day'));
+        }
+        this._isMonthDragging = false;
+        this.monthDragAnchor.set(null);
+        this.monthDragEnd.set(null);
+      }
+    }
+  }
+
+  onDayClick(day: DateTime) {
+    if (this._suppressNextClick) {
+      this._suppressNextClick = false;
+      return;
+    }
+    if (this.isTimeView()) {
+      if (!this.readonly()) this.addEvent(day);
+    } else {
+      this.dayLayout(day);
+    }
+  }
+
+  @HostListener('document:mouseup')
+  onDocumentMouseUp() {
+    // Safety net: if mouse is released outside the calendar grid, cancel any drag.
+    if (this._timeDragAnchor || this._isDragging) {
+      this._timeDragAnchor = null;
+      this._isDragging = false;
+      this.timeDragSelection.set(null);
+    }
+    if (this._isMonthDragging) {
+      this._isMonthDragging = false;
+      this.monthDragAnchor.set(null);
+      this.monthDragEnd.set(null);
+    }
   }
 
   onDayMouseLeave() {
@@ -353,6 +539,10 @@ export class CalendarComponent implements OnInit {
   addEvent(day?: DateTime) {
     const start = this.resolveNewEventStart(day);
     const end = start.plus({ hours: 1 });
+    this.openAddDialog(start, end);
+  }
+
+  private openAddDialog(start: DateTime, end: DateTime) {
     const dialogRef = this.dialog.open(AddEditEventDialogComponent, {
       data: {
         mode: 'add',

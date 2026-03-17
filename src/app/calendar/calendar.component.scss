@@ -451,3 +451,16 @@
   padding: 1px 4px;
   cursor: pointer;
 }
+
+.time-drag-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 15%, transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
+:host(.month) .day.day-drag-selected {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 15%, transparent);
+}
