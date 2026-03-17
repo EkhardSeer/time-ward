@@ -26,7 +26,16 @@
 
 .app-header-nav {
   display: flex;
+  align-items: center;
   gap: 4px;
+
+  .nav-divider {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0 6px 0 12px;
+  }
 
   button {
     color: rgba(255, 255, 255, 0.85);

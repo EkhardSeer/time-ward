@@ -8,7 +8,15 @@
         routerLinkActive="active-nav"
         [routerLinkActiveOptions]="{ exact: true }"
       >
-        Calendar Demo
+        Calendar
+      </button>
+      <span class="nav-divider">Demos</span>
+      <button mat-button routerLink="/demo/actions" routerLinkActive="active-nav">Actions</button>
+      <button mat-button routerLink="/demo/multi-calendar" routerLinkActive="active-nav">
+        Multi-Calendar
+      </button>
+      <button mat-button routerLink="/demo/sidebar" routerLinkActive="active-nav">
+        Sidebar Template
       </button>
       <button mat-button routerLink="/production" routerLinkActive="active-nav">
         Production Plan
