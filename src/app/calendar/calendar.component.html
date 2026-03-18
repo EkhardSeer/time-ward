@@ -85,43 +85,72 @@
     <div class="scroll-container" (scroll)="onScroll($event)">
       <!-- Weekday Header — sticky within the scroll container -->
       <div class="calendar-subheader">
-        @if (isTimeView()) {
-          <button
-            mat-button
-            class="time-axis-header week-num-btn"
-            (click)="view() === 'week' ? monthLayout() : weekLayout(date())"
-            [title]="
-              view() === 'week'
-                ? date().setLocale(i18n.locale).toFormat('MMMM yyyy')
-                : i18n.weekPrefix + ' ' + date().weekNumber
-            "
-          >
-            @if (view() === 'week') {
-              {{ date().setLocale(i18n.locale).toFormat('MMM') }}
-            } @else {
-              {{ i18n.weekPrefix }}&thinsp;{{ date().weekNumber }}
-            }
-          </button>
-        } @else if (view() === 'month') {
-          <div class="week-axis-header"></div>
-        }
-        @if (view() === 'day') {
-          <div class="weekday-header">
-            <div class="weekday">{{ date().setLocale(i18n.locale).toFormat('cccc d MMMM') }}</div>
-          </div>
-        } @else if (view() === 'week') {
-          <div class="weekday-header">
-            @for (day of weeks()[0]; track day; let i = $index) {
-              <button mat-button class="weekday" (click)="dayLayout(day)">
-                {{ day.setLocale(i18n.locale).toFormat('ccc d') }}
-              </button>
-            }
-          </div>
-        } @else {
-          <div class="weekday-header">
-            @for (weekday of weekdays; track weekday) {
-              <div class="weekday">{{ weekday }}</div>
-            }
+        <!-- Row 1: axis label + weekday column headers -->
+        <div class="subheader-row">
+          @if (isTimeView()) {
+            <button
+              mat-button
+              class="time-axis-header week-num-btn"
+              (click)="view() === 'week' ? monthLayout() : weekLayout(date())"
+              [title]="
+                view() === 'week'
+                  ? date().setLocale(i18n.locale).toFormat('MMMM yyyy')
+                  : i18n.weekPrefix + ' ' + date().weekNumber
+              "
+            >
+              @if (view() === 'week') {
+                {{ date().setLocale(i18n.locale).toFormat('MMM') }}
+              } @else {
+                {{ i18n.weekPrefix }}&thinsp;{{ date().weekNumber }}
+              }
+            </button>
+          } @else if (view() === 'month') {
+            <div class="week-axis-header"></div>
+          }
+          @if (view() === 'day') {
+            <div class="weekday-header">
+              <div class="weekday">{{ date().setLocale(i18n.locale).toFormat('cccc d MMMM') }}</div>
+            </div>
+          } @else if (view() === 'week') {
+            <div class="weekday-header">
+              @for (day of weeks()[0]; track day; let i = $index) {
+                <button mat-button class="weekday" (click)="dayLayout(day)">
+                  {{ day.setLocale(i18n.locale).toFormat('ccc d') }}
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="weekday-header">
+              @for (weekday of weekdays; track weekday) {
+                <div class="weekday">{{ weekday }}</div>
+              }
+            </div>
+          }
+        </div>
+        <!-- Row 2: all-day strip (week/day view only) -->
+        @if (isTimeView() && allDayRowCount() > 0) {
+          <div class="subheader-row all-day-row">
+            <div class="all-day-label">All day</div>
+            <div class="all-day-grid" [style.height.px]="allDayRowCount() * 24">
+              @for (event of allDayPositionedEvents(); track event.id) {
+                <div
+                  class="all-day-event"
+                  [class.hovered]="
+                    (hoveredEventId() ?? selectedEvent()?.id) ===
+                    (event.metadata.sourceId ?? event.id)
+                  "
+                  [style.left.%]="event.layout.left"
+                  [style.width]="'calc(' + event.layout.width + '% - 6px)'"
+                  [style.top.px]="event.layout.row * 24 + 1"
+                  [style.background-color]="event.color"
+                  (mouseenter)="hoveredEventId.set(event.metadata.sourceId ?? event.id)"
+                  (mouseleave)="hoveredEventId.set(null)"
+                  (click)="onEventClick(event); $event.stopPropagation()"
+                >
+                  <span class="all-day-event-title">{{ event.title }}</span>
+                </div>
+              }
+            </div>
           </div>
         }
       </div>
@@ -218,7 +247,7 @@
             }
           }
 
-          @for (event of positionedEvents(); track event.id) {
+          @for (event of timedPositionedEvents(); track event.id) {
             <div
               class="event"
               [class.hovered]="

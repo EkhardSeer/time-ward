@@ -264,7 +264,7 @@ export class CalendarComponent implements OnInit {
   visibleEvents = computed(() => {
     const seenIds = new Set<string>();
     const result: CalendarEvent[] = [];
-    for (const pe of this.positionedEvents()) {
+    for (const pe of [...this.positionedEvents(), ...this.allDayPositionedEvents()]) {
       const id = (pe.metadata?.sourceId as string | undefined) ?? pe.id;
       if (!seenIds.has(id)) {
         seenIds.add(id);
@@ -280,6 +280,66 @@ export class CalendarComponent implements OnInit {
   hoveredTimeSlot = signal<{ day: DateTime; row: number } | null>(null);
   hoveredWeekIndex = signal<number | null>(null);
   isTimeView = computed(() => this.view() !== 'month');
+
+  /** All-day events (duration ≥ 24 h) for the sticky strip above the time grid. */
+  allDayPositionedEvents = computed((): PositionedEvent[] => {
+    if (!this.isTimeView()) return [];
+    const view = this.view();
+    const week = this.weeks()[0];
+    if (!week?.length) return [];
+    const weekStart = week[0].startOf('day');
+    const dayCount = view === 'day' ? 1 : 7;
+    const dayWidth = 100 / dayCount;
+    const rowOccupied: Array<Array<{ start: number; end: number }>> = [];
+    const result: PositionedEvent[] = [];
+    for (const e of this.events()) {
+      if (e.end.diff(e.start, 'hours').hours < 24) continue;
+      const startDayRaw = Math.floor(e.start.diff(weekStart, 'days').days);
+      const endDayAdjusted = e.end.equals(e.end.startOf('day')) ? e.end.minus({ days: 1 }) : e.end;
+      const endDayRaw = Math.floor(endDayAdjusted.diff(weekStart, 'days').days);
+      const startDay = Math.max(0, startDayRaw);
+      const endDay = Math.min(dayCount - 1, endDayRaw);
+      if (startDay > dayCount - 1 || endDay < 0) continue;
+      let row = 0;
+      while (true) {
+        if (!rowOccupied[row]) rowOccupied[row] = [];
+        const conflicts = rowOccupied[row].some(
+          (occ) => startDay <= occ.end && endDay >= occ.start,
+        );
+        if (!conflicts) break;
+        row++;
+      }
+      rowOccupied[row].push({ start: startDay, end: endDay });
+      result.push({
+        ...e,
+        layout: {
+          left: startDay * dayWidth,
+          width: (endDay - startDay + 1) * dayWidth,
+          row,
+          weekIndex: 0,
+          colStart: startDay + 1,
+          colSpan: endDay - startDay + 1,
+        },
+        sizing: {},
+        metadata: { sourceId: e.id, dayIndex: startDay },
+      });
+    }
+    return result;
+  });
+
+  /** Number of stacked rows needed in the all-day strip. */
+  allDayRowCount = computed(() =>
+    this.allDayPositionedEvents().reduce((max, e) => Math.max(max, e.layout.row + 1), 0),
+  );
+
+  /** Timed events for the scrollable time grid — excludes all-day events. */
+  timedPositionedEvents = computed(() => {
+    if (!this.isTimeView()) return this.positionedEvents();
+    const allDayIds = new Set(
+      this.allDayPositionedEvents().map((e) => e.metadata.sourceId ?? e.id),
+    );
+    return this.positionedEvents().filter((e) => !allDayIds.has(e.metadata.sourceId ?? e.id));
+  });
 
   // ── Drag-to-create state ─────────────────────────────────────────────────
   /** Selection rectangle currently being dragged in week/day view. */
@@ -476,13 +536,15 @@ export class CalendarComponent implements OnInit {
       const view = this.view();
       if (view === 'week') {
         const week = this.weeks()[0];
+        const timedEvents = events.filter((e) => e.end.diff(e.start, 'hours').hours < 24);
         this.positionedEvents.set(
-          this.weekLayoutEngine.layoutWeek(events, week, this.maxOverlapColumns()),
+          this.weekLayoutEngine.layoutWeek(timedEvents, week, this.maxOverlapColumns()),
         );
         return;
       }
       if (view === 'day') {
-        this.positionedEvents.set(this.dayLayoutEngine.layoutDay(events, this.date()));
+        const timedEvents = events.filter((e) => e.end.diff(e.start, 'hours').hours < 24);
+        this.positionedEvents.set(this.dayLayoutEngine.layoutDay(timedEvents, this.date()));
         return;
       }
       this.positionedEvents.set(this.monthLayoutEngine.layoutMonth(events, this.weeks()));

@@ -227,13 +227,66 @@
 
 .calendar-subheader {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-shrink: 0;
   position: sticky;
   top: 0;
   z-index: 20;
   background-color: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
+}
+
+.subheader-row {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+}
+
+.all-day-row {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.all-day-label {
+  width: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  font-size: 10px;
+  color: var(--mat-sys-on-primary-container);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+.all-day-grid {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.all-day-event {
+  position: absolute;
+  border-radius: 3px;
+  font-size: 11px;
+  color: white;
+  padding: 2px 5px;
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  height: 20px;
+  line-height: 16px;
+
+  &.hovered {
+    filter: brightness(1.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.all-day-event-title {
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .calendar-body {
