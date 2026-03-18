@@ -6,6 +6,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { CalendarComponent } from '../../calendar.component';
 import { CalendarEvent } from '../../models/calendar-event';
+import { CalendarSource } from '../../models/calendar-source';
 
 const EVENTS: CalendarEvent[] = [
   {
@@ -28,6 +29,21 @@ const EVENTS: CalendarEvent[] = [
     color: '#e65100',
     start: DateTime.now().plus({ days: 1 }).startOf('day').set({ hour: 10 }),
     end: DateTime.now().plus({ days: 1 }).startOf('day').set({ hour: 11 }),
+  },
+];
+
+const CALENDARS: CalendarSource[] = [
+  {
+    id: 'work',
+    label: 'Work',
+    color: '#1565c0',
+    events: [EVENTS[0], EVENTS[2]],
+  },
+  {
+    id: 'personal',
+    label: 'Personal',
+    color: '#2e7d32',
+    events: [EVENTS[1]],
   },
 ];
 
@@ -58,12 +74,28 @@ const EVENTS: CalendarEvent[] = [
           <div class="control-row">
             <mat-slide-toggle [(ngModel)]="showViewToggle">showViewToggle</mat-slide-toggle>
           </div>
+          <div class="control-row">
+            <mat-slide-toggle [(ngModel)]="useCalendars">calendars</mat-slide-toggle>
+          </div>
+          <div class="control-row">
+            <mat-slide-toggle [(ngModel)]="reorderableCalendars" [disabled]="!useCalendars"
+              >reorderableCalendars</mat-slide-toggle
+            >
+          </div>
 
           <div class="control-section">Row Height</div>
           <div class="slider-row">
             <span class="slider-label">{{ rowHeight }}px</span>
             <mat-slider min="12" max="40" step="2" style="flex:1">
               <input matSliderThumb [(ngModel)]="rowHeight" />
+            </mat-slider>
+          </div>
+
+          <div class="control-section">Max Overlap Columns</div>
+          <div class="slider-row">
+            <span class="slider-label">{{ maxOverlapColumns }}</span>
+            <mat-slider min="1" max="10" step="1" style="flex:1">
+              <input matSliderThumb [(ngModel)]="maxOverlapColumns" />
             </mat-slider>
           </div>
 
@@ -84,12 +116,15 @@ const EVENTS: CalendarEvent[] = [
       <!-- Live calendar -->
       <app-calendar
         style="flex: 1; min-width: 0; height: 100%"
-        [events]="events"
+        [events]="useCalendars ? undefined : events"
+        [calendars]="useCalendars ? calendars : undefined"
         [readonly]="readonly"
         [showFab]="showFab"
         [showSidebar]="showSidebar"
         [showViewToggle]="showViewToggle"
         [rowHeight]="rowHeight"
+        [maxOverlapColumns]="maxOverlapColumns"
+        [reorderableCalendars]="reorderableCalendars"
         [initialView]="view"
       />
     </div>
@@ -203,13 +238,17 @@ const EVENTS: CalendarEvent[] = [
 })
 export class ConfigDemoComponent {
   readonly events = EVENTS;
+  readonly calendars = CALENDARS;
   readonly views = ['month', 'week', 'day'] as const;
 
   readonly = false;
   showFab = true;
   showSidebar = true;
   showViewToggle = true;
+  useCalendars = false;
+  reorderableCalendars = false;
   rowHeight = 20;
+  maxOverlapColumns = 3;
   view: 'month' | 'week' | 'day' = 'week';
 
   codePreview(): string {
@@ -218,7 +257,11 @@ export class ConfigDemoComponent {
     if (!this.showFab) lines.push('  [showFab]="false"');
     if (!this.showSidebar) lines.push('  [showSidebar]="false"');
     if (!this.showViewToggle) lines.push('  [showViewToggle]="false"');
+    if (this.useCalendars) lines.push('  [calendars]="calendars"');
+    if (this.reorderableCalendars) lines.push('  [reorderableCalendars]="true"');
     if (this.rowHeight !== 20) lines.push(`  [rowHeight]="${this.rowHeight}"`);
+    if (this.maxOverlapColumns !== 3)
+      lines.push(`  [maxOverlapColumns]="${this.maxOverlapColumns}"`);
     if (this.view !== 'month') lines.push(`  initialView="${this.view}"`);
     lines.push('/>');
     return lines.join('\n');

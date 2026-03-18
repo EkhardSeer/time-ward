@@ -113,6 +113,7 @@ const evaShifts = buildShifts(
       [showSidebar]="false"
       [rowHeight]="24"
       [maxOverlapColumns]="5"
+      [reorderableCalendars]="true"
     />
   `,
   styles: `

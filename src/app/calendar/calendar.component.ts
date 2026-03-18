@@ -37,6 +37,7 @@ import { EventTimeRangeComponent } from './components/event-time-range/event-tim
 import { MatSelectModule } from '@angular/material/select';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CalendarAction } from './models/calendar-action';
 import { EVENT_MOCK } from './testing/event-mock';
 
@@ -73,6 +74,8 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
     NgStyle,
     ColorPickerComponent,
     EventTimeRangeComponent,
+    CdkDropList,
+    CdkDrag,
   ],
 })
 export class CalendarComponent implements OnInit {
@@ -114,6 +117,8 @@ export class CalendarComponent implements OnInit {
    * Default: 3.
    */
   maxOverlapColumns = input(3);
+  /** When `true`, calendar source chips can be dragged to reorder them. Default: `false`. */
+  reorderableCalendars = input(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   /** Emitted when the user saves a new event. */
@@ -126,6 +131,8 @@ export class CalendarComponent implements OnInit {
   eventSelected = output<CalendarEvent>();
   /** Emitted when the user clicks an action in the calendar toolbar menu. */
   actionTriggered = output<CalendarAction>();
+  /** Emitted when the user reorders calendar source chips via drag-and-drop. */
+  calendarsReordered = output<CalendarSource[]>();
 
   /** The event currently shown in the details panel. */
   selectedEvent = signal<CalendarEvent | null>(null);
@@ -393,18 +400,50 @@ export class CalendarComponent implements OnInit {
    */
   private _disabledCalendars = signal<Set<string>>(new Set());
 
+  /** User-defined ordering of calendar source IDs (null = use original input order). */
+  private _calendarOrder = signal<string[] | null>(null);
+
+  /** Calendars in the user's drag order (or original input order if not reordered). */
+  protected orderedCalendars = computed(() => {
+    const cals = this.calendars();
+    if (!cals) return [];
+    const order = this._calendarOrder();
+    if (!order) return cals;
+    const indexMap = new Map(order.map((id, i) => [id, i]));
+    return [...cals].sort(
+      (a, b) => (indexMap.get(a.id) ?? Infinity) - (indexMap.get(b.id) ?? Infinity),
+    );
+  });
+
   /** Active events: multi-calendar sources take precedence, then external flat input, then internal store. */
   events = computed(() => {
-    const sources = this.calendars();
-    if (sources) {
+    const sources = this.orderedCalendars();
+    if (sources.length) {
       const disabled = this._disabledCalendars();
       return sources.filter((s) => !disabled.has(s.id)).flatMap((s) => s.events);
     }
     return this.eventsInput() ?? this._ownEvents();
   });
 
-  /** Toggle a calendar source on/off. */
+  /** Suppresses the next click on a chip after a drag-drop. */
+  private _suppressClick = false;
+
+  /** Handle drag-drop reorder of calendar source chips. */
+  onCalendarDrop(event: CdkDragDrop<CalendarSource[]>): void {
+    this._suppressClick = true;
+    if (event.previousIndex === event.currentIndex) return;
+    const reordered = [...this.orderedCalendars()];
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    this._calendarOrder.set(reordered.map((s) => s.id));
+    this.calendarsReordered.emit(reordered);
+  }
+
+  /** Toggle a calendar source on/off, unless suppressed by a preceding drag. */
   toggleCalendar(id: string): void {
+    if (this._suppressClick) {
+      this._suppressClick = false;
+      return;
+    }
     this._disabledCalendars.update((set) => {
       const next = new Set(set);
       if (next.has(id)) next.delete(id);

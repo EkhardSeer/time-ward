@@ -31,9 +31,17 @@
       </div>
       <span class="header-spacer"></span>
       @if (calendars(); as sources) {
-        <div class="calendar-source-toggles">
-          @for (source of sources; track source.id) {
+        <div
+          class="calendar-source-toggles"
+          cdkDropList
+          cdkDropListOrientation="horizontal"
+          [cdkDropListDisabled]="!reorderableCalendars()"
+          (cdkDropListDropped)="onCalendarDrop($event)"
+        >
+          @for (source of orderedCalendars(); track source.id) {
             <button
+              cdkDrag
+              [cdkDragDisabled]="!reorderableCalendars()"
               class="calendar-source-chip"
               [class.disabled]="!isCalendarEnabled(source.id)"
               [style.--source-color]="source.color"
