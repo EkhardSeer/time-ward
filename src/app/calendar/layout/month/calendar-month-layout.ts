@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { CalendarEvent } from '../../models/calendar-event';
 import { PositionedEvent } from '../../models/positioned-event';
 import { CalendarLayoutBase } from '../base/calendar-layout-base';
-import { hourFraction } from '../utils/time-utils';
+
 import { RowState } from './types/row-state';
 import { MonthLayoutContext } from './types/month-layout-context';
 import { EventGridRange } from './types/event-grid-range';
@@ -332,6 +332,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     const {
       startWeekIndex,
       startDayIndex,
+      endDayIndex,
       endWeekIndex,
       eventStartsBeforeVisible,
       eventEndsAfterVisible,
@@ -340,7 +341,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
       startWeekIndex === endWeekIndex && !eventStartsBeforeVisible && !eventEndsAfterVisible;
 
     if (isSingleWeek) {
-      return this.singleWeekBounds(event, startDayIndex, dayWidth);
+      return this.singleWeekBounds(startDayIndex, endDayIndex, dayWidth);
     }
     if (seg.weekIndex === startWeekIndex) {
       return this.firstWeekBounds(event, seg, range, dayWidth);
@@ -354,22 +355,14 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
   }
 
   private singleWeekBounds(
-    event: CalendarEvent,
     startDayIndex: number,
+    endDayIndex: number,
     dayWidth: number,
   ): { leftPercent: number; widthPercent: number } {
-    const rawLeft = startDayIndex * dayWidth + hourFraction(event.start) * dayWidth;
-    const durationHours = event.end.diff(event.start, 'minutes').minutes / 60;
-    const rawWidth = (durationHours / 24) * dayWidth;
-    const minWidth = dayWidth * this.MIN_SINGLE_DAY_WIDTH_FRACTION;
-
-    if (rawWidth >= minWidth) {
-      return { leftPercent: rawLeft, widthPercent: rawWidth };
-    }
-
-    // Enforce minimum width; clamp left so the event doesn't overflow past the day's right edge.
-    const dayRightEdge = (startDayIndex + 1) * dayWidth;
-    return { leftPercent: Math.min(rawLeft, dayRightEdge - minWidth), widthPercent: minWidth };
+    return {
+      leftPercent: startDayIndex * dayWidth,
+      widthPercent: (endDayIndex - startDayIndex + 1) * dayWidth,
+    };
   }
 
   private firstWeekBounds(
@@ -381,12 +374,11 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     if (range.eventStartsBeforeVisible) {
       const leftPercent = 0;
       if (seg.weekIndex === range.endWeekIndex && !range.eventEndsAfterVisible) {
-        const endPercent = seg.lastDayIndex * dayWidth + hourFraction(event.end) * dayWidth;
-        return { leftPercent, widthPercent: endPercent };
+        return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth };
       }
       return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth };
     }
-    const leftPercent = seg.firstDayIndex * dayWidth + hourFraction(event.start) * dayWidth;
+    const leftPercent = seg.firstDayIndex * dayWidth;
     return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth - leftPercent };
   }
 
@@ -400,8 +392,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
     if (range.eventEndsAfterVisible) {
       return { leftPercent, widthPercent: 100 - leftPercent };
     }
-    const endPercent = seg.lastDayIndex * dayWidth + hourFraction(event.end) * dayWidth;
-    return { leftPercent, widthPercent: endPercent - leftPercent };
+    return { leftPercent, widthPercent: (seg.lastDayIndex + 1) * dayWidth - leftPercent };
   }
 
   private emitOverflowBadges(ctx: MonthLayoutContext): void {
