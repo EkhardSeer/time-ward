@@ -39,6 +39,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CalendarAction } from './models/calendar-action';
+import { CalendarSourceTogglesComponent } from './components/calendar-source-toggles/calendar-source-toggles.component';
+import { CalendarActionsMenuComponent } from './components/calendar-actions-menu/calendar-actions-menu.component';
+import { CalendarEventSidebarComponent } from './components/calendar-event-sidebar/calendar-event-sidebar.component';
 import { EVENT_MOCK } from './testing/event-mock';
 
 import {
@@ -64,18 +67,14 @@ const ISO_FORMAT = "yyyy-MM-dd'T'HH:mm";
     MatSelectModule,
     MatIconModule,
     MatDialogModule,
-    MatMenuModule,
-    MatDividerModule,
     MatToolbarModule,
-    MatFormFieldModule,
-    MatInputModule,
-    FormsModule,
-    NgTemplateOutlet,
     NgStyle,
-    ColorPickerComponent,
-    EventTimeRangeComponent,
-    CdkDropList,
-    CdkDrag,
+    CalendarSourceTogglesComponent,
+    CalendarActionsMenuComponent,
+    CalendarEventSidebarComponent,
+    CalendarSourceTogglesComponent,
+    CalendarActionsMenuComponent,
+    CalendarEventSidebarComponent,
   ],
 })
 export class CalendarComponent implements OnInit {
@@ -458,7 +457,7 @@ export class CalendarComponent implements OnInit {
    * Set of calendar source IDs the user has hidden.
    * All sources are visible by default; toggling adds/removes from this set.
    */
-  private _disabledCalendars = signal<Set<string>>(new Set());
+  protected _disabledCalendars = signal<Set<string>>(new Set());
 
   /** User-defined ordering of calendar source IDs (null = use original input order). */
   private _calendarOrder = signal<string[] | null>(null);
@@ -485,12 +484,8 @@ export class CalendarComponent implements OnInit {
     return this.eventsInput() ?? this._ownEvents();
   });
 
-  /** Suppresses the next click on a chip after a drag-drop. */
-  private _suppressClick = false;
-
   /** Handle drag-drop reorder of calendar source chips. */
   onCalendarDrop(event: CdkDragDrop<CalendarSource[]>): void {
-    this._suppressClick = true;
     if (event.previousIndex === event.currentIndex) return;
     const reordered = [...this.orderedCalendars()];
     moveItemInArray(reordered, event.previousIndex, event.currentIndex);
@@ -498,12 +493,8 @@ export class CalendarComponent implements OnInit {
     this.calendarsReordered.emit(reordered);
   }
 
-  /** Toggle a calendar source on/off, unless suppressed by a preceding drag. */
+  /** Toggle a calendar source on/off. */
   toggleCalendar(id: string): void {
-    if (this._suppressClick) {
-      this._suppressClick = false;
-      return;
-    }
     this._disabledCalendars.update((set) => {
       const next = new Set(set);
       if (next.has(id)) next.delete(id);

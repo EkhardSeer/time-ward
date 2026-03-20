@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 import { CalendarEvent } from '../../models/calendar-event';
 import { PositionedEvent } from '../../models/positioned-event';
 import { CalendarLayoutBase } from '../base/calendar-layout-base';
+import { DAY_WIDTH_PERCENT } from '../constants';
 
 import { RowState } from './types/row-state';
 import { MonthLayoutContext } from './types/month-layout-context';
@@ -65,7 +66,16 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
   /** Layout events for month view with collision detection. */
   layoutMonth(events: CalendarEvent[], weeks: DateTime[][]): PositionedEvent[] {
     const ctx = this.initContext(weeks);
-    for (const event of events) {
+    // Process longer (multi-day) events first so they claim lower rows across their full span.
+    // This prevents single-day events on a crowded day from pushing multi-day events into
+    // overflow and causing spurious "+N more" badges on unrelated, less-crowded days.
+    const sorted = [...events].sort((a, b) => {
+      const aDur = a.end.diff(a.start, 'milliseconds').milliseconds;
+      const bDur = b.end.diff(b.start, 'milliseconds').milliseconds;
+      if (bDur !== aDur) return bDur - aDur; // longer events first
+      return a.start.toMillis() - b.start.toMillis(); // earlier start as tie-break
+    });
+    for (const event of sorted) {
       this.processEvent(event, ctx);
     }
     this.emitOverflowBadges(ctx);
@@ -81,7 +91,7 @@ export class CalendarMonthLayout extends CalendarLayoutBase {
       weekHeightPercent,
       dayHeaderHeightPercent,
       eventRowHeightPercent,
-      dayWidth: 100 / 7,
+      dayWidth: DAY_WIDTH_PERCENT,
       rowsPerDay: weeks.map(() =>
         Array.from({ length: 7 }, () =>
           Array.from({ length: 10 }, () => ({

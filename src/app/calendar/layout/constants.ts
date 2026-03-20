@@ -10,6 +10,9 @@ export const ROWS_PER_HOUR = 4;
 /** Days in a week. */
 export const DAYS_IN_WEEK = 7;
 
+/** Width of one day column as a percentage of the full calendar width (100 / 7). */
+export const DAY_WIDTH_PERCENT = 100 / 7;
+
 /** Pixel gap between an event chip and the left edge of its day column. */
 export const EVENT_EDGE_PADDING_LEFT = 8;
 
